@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CFA L2 · Reading 3 · Machine Learning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;600;700;900&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   Reading 21 — Residual Income Valuation
+   Design system: light theme — tokens and component patterns copied
+   verbatim from reading18_ddm_valuation.html, the project's canonical
+   light-theme source. No re-derivation performed (see project knowledge
+   file, sec 2.2).
+   ========================================================================== */
+:root{
+  --bg:#F0EBE0;
+  --surface:#E4DBC7;
+  --surface-2:#B3A891;
+  --surface-3:#968873;
+  --border:#C4B89C;
+  --gold:#A38228;
+  --gold-soft:#826613;
+  --green:#4A7A69;
+  --green-soft:#3D6656;
+  --rust:#A2492E;
+  --rust-soft:#8A3B23;
+  --blue:#4A6690;
+  --blue-soft:#3D5578;
+  --text:#1B1A17;
+  --text-muted:#2B2822;
+  --text-dim:#6B6250;
+  --radius:10px;
+  --radius-lg:14px;
+  --shadow: 0 8px 24px rgba(60,46,20,.12);
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Inter',sans-serif;
+  font-size:15px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:'Roboto Slab',serif; margin:0 0 10px; color:var(--text);}
+h4{font-size:16.5px; color:var(--gold-soft); font-weight:700; margin-top:22px;}
+p{margin:0 0 12px;}
+a{color:var(--blue-soft);}
+code, .mono{font-family:'IBM Plex Mono',monospace;}
+::selection{background:var(--gold); color:var(--text);}
+
+#app{display:flex; min-height:100vh; max-width:1400px; margin:0 auto;}
+
+/* ---------- SIDEBAR ---------- */
+.sidebar{
+  width:290px; flex-shrink:0; position:sticky; top:0; height:100vh; overflow-y:auto;
+  background:var(--surface); border-right:1px solid var(--border);
+  padding:22px 18px 30px; scrollbar-width:thin;
+}
+.brand{display:flex; align-items:center; gap:12px; margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid var(--border);}
+.brand-mark{width:38px; height:38px; flex-shrink:0;}
+.brand-eyebrow{font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.09em; color:var(--gold); font-weight:600; text-transform:uppercase;}
+.brand-name{font-family:'Roboto Slab',serif; font-weight:700; font-size:15px; line-height:1.25; margin-top:2px;}
+
+.sidebar-stats{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;}
+.stat-chip{background:var(--surface-2); border-radius:var(--radius); padding:9px 10px; text-align:center;}
+.stat-chip .v{font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:17px; color:var(--gold-soft);}
+.stat-chip .l{font-size:10.5px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; margin-top:2px;}
+
+.sync-line{font-size:11px; color:var(--text-dim); margin-bottom:18px; font-family:'IBM Plex Mono',monospace;}
+.sync-line #sync-status{color:var(--green-soft); font-weight:600;}
+.sync-line.offline #sync-status{color:var(--rust-soft);}
+
+.nav-group-label{font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-dim); font-weight:600; margin:16px 0 6px 4px;}
+.nav-item{
+  display:flex; align-items:center; gap:9px; width:100%; text-align:left;
+  background:none; border:none; padding:8px 9px; border-radius:8px; cursor:pointer;
+  font-family:'Inter',sans-serif; font-size:13.3px; color:var(--text-muted);
+  margin-bottom:2px; transition:background .15s;
+}
+.nav-item:hover{background:var(--surface-2);}
+.nav-item.active{background:var(--surface-2); color:var(--text); font-weight:600;}
+.nav-item .dot{width:8px; height:8px; border-radius:50%; flex-shrink:0; background:var(--border); border:1.5px solid var(--text-dim);}
+.nav-item .dot.started{background:var(--gold); border-color:var(--gold);}
+.nav-item .dot.mastered{background:var(--green); border-color:var(--green);}
+.nav-item .los-code{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-dim); flex-shrink:0;}
+.nav-item.practice-item{font-weight:600;}
+
+/* ---------- MAIN ---------- */
+.main{flex:1; min-width:0; padding:28px 40px 80px;}
+.view{display:none;}
+.view.active{display:block; animation:fadein .2s ease;}
+@keyframes fadein{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+
+.los-tag{
+  display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:11.5px; font-weight:600;
+  background:var(--gold); color:var(--text); padding:4px 11px; border-radius:20px; letter-spacing:.03em;
+  margin-bottom:10px;
+}
+.module-tag{
+  display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600;
+  color:var(--text-dim); letter-spacing:.06em; text-transform:uppercase; margin-bottom:8px;
+}
+.section-title{font-size:25px; margin-bottom:4px;}
+.section-sub{color:var(--text-muted); font-size:14px; margin-bottom:22px;}
+
+.theory p{color:var(--text-muted);}
+.theory ul, .theory ol{color:var(--text-muted); padding-left:22px; margin:0 0 12px;}
+.theory li{margin-bottom:6px;}
+.theory strong{color:var(--text); font-weight:700;}
+.theory h4:first-child{margin-top:0;}
+
+.callout{
+  background:var(--surface-2); border-left:3px solid var(--gold);
+  border-radius:0 var(--radius) var(--radius) 0; padding:13px 16px; margin:16px 0; color:var(--text-muted);
+}
+.callout-label{
+  font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--text-muted); margin-bottom:5px; display:block;
+}
+.callout p:last-child{margin-bottom:0;}
+
+.formula-box{
+  background:var(--surface-3); border-radius:var(--radius-lg); padding:18px 20px; margin:16px 0;
+  font-family:'IBM Plex Mono',monospace; color:var(--text);
+}
+.formula-box .label{font-size:10.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--gold-soft); font-weight:700; margin-bottom:10px; font-family:'Inter',sans-serif;}
+.formula-box .eq{font-size:16px; text-align:center; margin:10px 0; overflow-x:auto;}
+.formula-box .fdef{border-top:1px dashed var(--border); margin-top:12px; padding-top:10px; font-size:12.5px; color:var(--text-muted); font-family:'Inter',sans-serif;}
+.formula-box .fdef div{margin-bottom:3px;}
+.formula-box .fdef b{color:var(--text); font-family:'IBM Plex Mono',monospace;}
+
+table.dtable{width:100%; border-collapse:collapse; margin:16px 0; font-size:13.5px;}
+table.dtable th{background:var(--surface-2); color:var(--text); text-align:left; padding:9px 12px; font-weight:600; border-bottom:2px solid var(--border);}
+table.dtable td{padding:9px 12px; border-bottom:1px solid var(--border); color:var(--text-muted);}
+table.dtable tr:last-child td{border-bottom:none;}
+
+table.mini{width:100%; border-collapse:collapse; margin:12px 0; font-size:13px; font-family:'IBM Plex Mono',monospace;}
+table.mini th, table.mini td{border:1px solid var(--border); padding:7px 10px; text-align:center;}
+table.mini th{background:var(--surface-2); font-weight:600; font-family:'Inter',sans-serif;}
+table.mini td:first-child, table.mini th:first-child{text-align:left; font-family:'Inter',sans-serif;}
+
+.tag{display:inline-block; font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px; font-family:'IBM Plex Mono',monospace; letter-spacing:.02em;}
+.tag-rust{background:rgba(162,73,46,.14); color:var(--rust-soft);}
+.tag-green{background:rgba(74,122,105,.14); color:var(--green-soft);}
+.tag-gold{background:rgba(163,130,40,.16); color:var(--gold-soft);}
+.tag-blue{background:rgba(74,102,144,.14); color:var(--blue-soft);}
+
+.nudge{
+  display:flex; gap:10px; align-items:flex-start; background:var(--surface-2);
+  border-radius:var(--radius); padding:12px 14px; margin:18px 0 6px; font-size:13px; color:var(--text-muted);
+}
+.nudge .ic{font-size:17px; flex-shrink:0;}
+.nudge span:last-child{flex:1; min-width:0;}
+
+.btn{
+  display:inline-flex; align-items:center; gap:6px; font-family:'Inter',sans-serif; font-weight:600; font-size:13.5px;
+  padding:9px 16px; border-radius:9px; border:1px solid var(--border); background:var(--surface);
+  color:var(--text); cursor:pointer; transition:all .15s;
+}
+.btn:hover{transform:translateY(-1px); box-shadow:var(--shadow);}
+.btn-primary{background:var(--gold); border-color:var(--gold); color:var(--text);}
+.btn-green{background:var(--green); border-color:var(--green); color:#fff;}
+.btn-rust{background:var(--rust); border-color:var(--rust); color:#fff;}
+.btn-ghost{background:transparent;}
+.btn-row{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;}
+
+.kbd{
+  display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:11px; background:var(--surface-3);
+  color:var(--text); border:1px solid var(--border); border-bottom-width:2px; border-radius:5px; padding:2px 7px; font-weight:600;
+}
+.kbd-hint-row{
+  display:flex; flex-wrap:wrap; justify-content:center; gap:16px; margin-top:16px; padding-top:14px;
+  border-top:1px solid var(--border); font-size:12px; color:var(--text-dim);
+}
+.kbd-hint-row span{display:flex; align-items:center; gap:6px;}
+
+.roadmap{display:flex; flex-direction:column; gap:8px; margin:16px 0;}
+.roadmap-item{
+  display:flex; align-items:center; gap:12px; background:var(--surface-2); border-radius:var(--radius);
+  padding:12px 15px; cursor:pointer; border:1px solid transparent; transition:border-color .15s;
+}
+.roadmap-item:hover{border-color:var(--gold);}
+.roadmap-item .ric{font-size:17px; flex-shrink:0;}
+.roadmap-item .rit{flex:1; font-weight:600; font-size:13.5px;}
+.roadmap-item .risub{font-size:11.5px; color:var(--text-muted);}
+.roadmap-item .rarrow{color:var(--text-dim);}
+
+.stat-card{background:var(--surface-2); border-radius:var(--radius); padding:14px; text-align:center;}
+.stat-card .v{font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:22px; color:var(--gold-soft);}
+.stat-card .l{font-size:11px; color:var(--text-muted); margin-top:3px;}
+.stat-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:18px 0;}
+
+/* ---------- Overview progress ring ---------- */
+.progress-ring-wrap{display:flex; align-items:center; gap:22px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px 24px; margin-bottom:22px;}
+.progress-ring-wrap .info{flex:1;}
+.progress-ring-wrap h3{margin:0 0 4px;}
+.progress-ring-wrap p{margin:0; color:var(--text-muted); font-size:13px;}
+
+/* ---------- FLASHCARD ---------- */
+.deck-block{margin:18px 0 30px;}
+.deck-block h3{font-size:16px; margin-bottom:10px;}
+.deck-progress{font-size:12px; color:var(--text-dim); font-family:'IBM Plex Mono',monospace;}
+.deck-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;}
+.flip-hint{text-align:center; font-size:11.5px; color:var(--text-dim); margin-bottom:8px;}
+
+.flashcard{perspective:1200px; height:230px; max-width:640px; margin:0 auto 16px; cursor:pointer;}
+.flashcard-inner{position:relative; width:100%; height:100%; transition:transform .5s; transform-style:preserve-3d;}
+.flashcard.flipped .flashcard-inner{transform:rotateY(180deg);}
+.flashcard-face{
+  position:absolute; inset:0; backface-visibility:hidden; border-radius:14px; padding:22px 26px;
+  display:flex; flex-direction:column; justify-content:center; overflow-y:auto;
+  border:1px solid var(--border); box-shadow:var(--shadow);
+}
+.face-front{background:var(--surface);}
+.face-back{background:var(--surface-3); transform:rotateY(180deg); border-color:var(--gold);}
+.flashcard-face .eyebrow{font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--gold-soft); letter-spacing:.06em; margin-bottom:8px; font-weight:700;}
+.flashcard-face .txt{font-size:15px; color:var(--text); line-height:1.55;}
+.flashcard-face .txt b, .flashcard-face .txt strong{color:var(--gold-soft);}
+
+.grade-row{display:flex; gap:10px; justify-content:center; max-width:640px; margin:0 auto;}
+.grade-row .btn{flex:1; justify-content:center;}
+
+.empty-state{text-align:center; padding:40px 20px; color:var(--text-muted);}
+.empty-state .big{font-size:40px; margin-bottom:10px;}
+
+/* ---------- QUIZ ---------- */
+.quiz-setup{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;}
+.quiz-card{max-width:680px; margin:0 auto; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:24px 26px; box-shadow:var(--shadow);}
+.quiz-meta{display:flex; justify-content:space-between; font-size:11.5px; color:var(--text-dim); font-family:'IBM Plex Mono',monospace; margin-bottom:10px;}
+.quiz-q{font-size:15.5px; margin-bottom:16px; color:var(--text);}
+.quiz-q table.mini{margin:12px 0 0;}
+.opt{
+  display:flex; align-items:flex-start; gap:10px; padding:12px 14px; border:1px solid var(--border);
+  border-radius:9px; margin-bottom:9px; cursor:pointer; transition:all .15s; background:var(--surface-2);
+}
+.opt:hover{border-color:var(--gold);}
+.opt .oletter{font-family:'IBM Plex Mono',monospace; font-weight:700; color:var(--gold-soft); flex-shrink:0;}
+.opt.correct{background:rgba(74,122,105,.18); border-color:var(--green);}
+.opt.wrong{background:rgba(162,73,46,.18); border-color:var(--rust);}
+.opt.disabled{cursor:default; pointer-events:none;}
+.quiz-exp{background:var(--surface-2); border-left:3px solid var(--blue); border-radius:0 var(--radius) var(--radius) 0; padding:13px 15px; margin-top:14px; font-size:13.3px; color:var(--text-muted);}
+.quiz-exp b{color:var(--text);}
+.quiz-score{font-family:'IBM Plex Mono',monospace; font-weight:700; color:var(--gold-soft);}
+.quiz-result{text-align:center; padding:20px;}
+.quiz-result .bigscore{font-family:'IBM Plex Mono',monospace; font-size:44px; font-weight:700; color:var(--gold-soft); margin:10px 0;}
+.wrong-review-item{background:var(--surface-2); border-radius:var(--radius); padding:12px 14px; margin-bottom:8px; text-align:left; font-size:13px;}
+.wrong-review-item .wq{font-weight:600; margin-bottom:4px;}
+
+/* ---------- PRACTICE ---------- */
+.practice-card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:22px 24px; margin-bottom:20px;}
+.ph{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;}
+.ph h3{font-size:16px; display:inline;}
+.done-check{display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-muted); cursor:pointer;}
+.practice-scenario{background:var(--surface-2); border-radius:var(--radius); padding:13px 15px; margin-bottom:12px; font-size:13.8px; color:var(--text-muted);}
+.practice-scenario table.mini{margin-top:10px;}
+.practice-card details{background:var(--surface-2); border-radius:8px; margin-bottom:8px; padding:10px 14px;}
+.practice-card summary{cursor:pointer; font-weight:600; font-size:13.3px; color:var(--gold-soft); outline:none;}
+.practice-card details > div{margin-top:10px; font-size:13.5px; color:var(--text-muted); padding-top:10px; border-top:1px dashed var(--border);}
+.practice-card details .formula-box{margin:8px 0;}
+.practice-final{background:rgba(163,130,40,.14); border:1px solid var(--gold); border-radius:var(--radius); padding:11px 15px; margin-top:10px; font-weight:600; font-size:13.8px; color:var(--gold-soft);}
+
+/* ---------- Illustrations (generic building blocks) ---------- */
+.wf-step{display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:8px; margin-bottom:6px; font-family:'IBM Plex Mono',monospace; font-size:13px;}
+.wf-step .lbl{font-family:'Inter',sans-serif; font-weight:500;}
+.wf-step.base{background:var(--surface-3); font-weight:700;}
+.wf-step.plus{background:rgba(74,122,105,.14);}
+.wf-step.minus{background:rgba(162,73,46,.14);}
+.wf-step.result{background:var(--gold); color:var(--text); font-weight:700;}
+
+.phase-table-wrap{overflow-x:auto;}
+.value-card{background:var(--surface-2); border-radius:var(--radius); padding:15px 16px; border:1px solid var(--border);}
+.value-card.hi{border-color:var(--gold); box-shadow:0 0 0 1px var(--gold);}
+.value-card .vic{font-size:20px; margin-bottom:6px;}
+.value-card h5{margin:0 0 6px; font-size:13.8px; color:var(--text);}
+.value-card p{font-size:12.5px; color:var(--text-muted); margin:0;}
+.grid-2{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:16px 0;}
+
+.growth-chart{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:18px 20px; margin:16px 0;}
+.growth-chart svg{width:100%; height:auto; display:block;}
+.growth-legend{display:flex; gap:18px; justify-content:center; margin-top:10px; font-size:12px; color:var(--text-muted); flex-wrap:wrap;}
+.growth-legend span{display:flex; align-items:center; gap:6px;}
+.legend-dot{width:10px; height:10px; border-radius:50%; display:inline-block;}
+
+.constraint-bars{margin:16px 0;}
+.cbar-row{margin-bottom:14px;}
+.cbar-label{display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:5px; color:var(--text-muted);}
+.cbar-track{background:var(--surface-2); border-radius:20px; height:22px; overflow:hidden;}
+.cbar-fill{height:100%; border-radius:20px; display:flex; align-items:center; padding-left:10px; font-size:11px; font-weight:700; color:#fff; font-family:'IBM Plex Mono',monospace;}
+
+.pill-toggle{display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;}
+.pill-toggle button{flex:1; min-width:120px; padding:9px; border-radius:8px; border:1px solid var(--border); background:var(--surface); cursor:pointer; font-weight:600; font-size:12.8px; color:var(--text-muted);}
+.pill-toggle button.active{background:var(--gold); border-color:var(--gold); color:var(--text);}
+
+.pe-scale{display:flex; align-items:center; gap:10px; margin:14px 0;}
+.pe-scale .track{flex:1; height:8px; border-radius:6px; background:var(--surface-2); position:relative;}
+.pe-scale .marker{position:absolute; top:-6px; width:20px; height:20px; border-radius:50%; background:var(--gold); border:2px solid var(--bg); transform:translateX(-50%);}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 860px){
+  #app{display:block; max-width:100%;}
+  .sidebar{position:relative; width:100%; height:auto; top:auto; border-right:none; border-bottom:1px solid var(--border);}
+  .main{padding:20px 16px 60px;}
+  .stat-grid{grid-template-columns:repeat(2,1fr);}
+  .grid-2{grid-template-columns:1fr;}
+  .section-title{font-size:21px;}
+  .flashcard{height:260px;}
+  .quiz-card{padding:18px 16px;}
+  .practice-card{padding:16px 14px;}
+  table.mini, table.dtable{
+    display:block; overflow-x:auto; white-space:nowrap; -webkit-overflow-scrolling:touch;
+  }
+}
+.quiz-q table{margin:12px 0 12px;}.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0;}@media(max-width:860px){.grid-3{grid-template-columns:1fr;} table.dtable,table.mini{display:block;overflow-x:auto;}}</style>
+</head>
+<body>
+<div id="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 34H34M6 34V6" stroke="var(--gold)" stroke-width="1.8" stroke-linecap="round"/><circle cx="13" cy="26" r="1.8" stroke="var(--gold)" stroke-width="1.5"/><circle cx="19" cy="22" r="1.8" stroke="var(--gold)" stroke-width="1.5"/><circle cx="24" cy="18" r="1.8" stroke="var(--gold)" stroke-width="1.5"/><circle cx="30" cy="10" r="1.8" stroke="var(--gold)" stroke-width="1.5"/><path d="M9 29L33 8" stroke="var(--gold)" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <div><div class="brand-eyebrow">CFA Level II · Quantitative Methods</div><div class="brand-name">R3 · Machine<br>Learning</div></div>
+    </div>
+    <div class="sidebar-stats">
+      <div class="stat-chip"><div class="v" id="stat-mastery">0%</div><div class="l">Mastered</div></div>
+      <div class="stat-chip"><div class="v" id="stat-due">0</div><div class="l">Due for review</div></div>
+    </div>
+    <div class="sync-line" id="sync-line">Firebase: <span id="sync-status">connecting…</span></div>
+    <div class="nav-group-label">Overview</div>
+    <button class="nav-item" data-view="overview"><span class="dot" id="dot-overview"></span>Overview</button>
+    <div class="nav-group-label">Module 3.1 — Types of Learning &amp; Overfitting</div>
+    <button class="nav-item" data-view="a"><span class="dot" id="dot-a"></span><span class="los-code">3.a</span> Supervised, Unsupervised &amp; Deep Learning</button>
+    <button class="nav-item" data-view="b"><span class="dot" id="dot-b"></span><span class="los-code">3.b</span> Overfitting &amp; Remedies</button>
+    <div class="nav-group-label">Module 3.2 — Supervised Algorithms</div>
+    <button class="nav-item" data-view="c"><span class="dot" id="dot-c"></span><span class="los-code">3.c</span> Supervised Learning Algorithms</button>
+    <div class="nav-group-label">Module 3.3 — Unsupervised &amp; Other Models</div>
+    <button class="nav-item" data-view="d"><span class="dot" id="dot-d"></span><span class="los-code">3.d</span> Unsupervised, Neural Nets &amp; DLNs</button>
+    <div class="nav-group-label">Practice</div>
+    <button class="nav-item practice-item" data-view="review">🔁 Spaced Review</button>
+    <button class="nav-item practice-item" data-view="quiz">📝 Quiz</button>
+    <button class="nav-item practice-item" data-view="practice">🧮 Practice Problems</button>
+  </aside>
+  <main class="main" id="main">
+    <div class="view active" id="view-overview">
+      <div class="module-tag">CFA Level II · Quantitative Methods</div>
+      <h1 class="section-title">Reading 3: Machine Learning</h1>
+      <p class="section-sub">Terminology of advanced statistical models collectively called machine learning. 4 LOS across three modules.</p>
+      <div class="progress-ring-wrap"><div class="info"><h3>Exam Focus</h3><p>Be familiar with ML terminology, the different types of models, their applications in investment decision-making, and their limitations. Specifically, be able to <strong>identify the algorithm most suitable for a given problem</strong>.</p></div></div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="v" id="ov-cards">0</div><div class="l">Flashcards</div></div>
+        <div class="stat-card"><div class="v" id="ov-quiz">0</div><div class="l">Quiz Questions</div></div>
+        <div class="stat-card"><div class="v" id="ov-practice">0</div><div class="l">Practice Problems</div></div>
+        <div class="stat-card"><div class="v">4</div><div class="l">LOS Covered</div></div>
+      </div>
+      <h4>Roadmap</h4>
+      <div class="roadmap" id="overview-roadmap"></div>
+      <div class="nudge"><span class="ic">💡</span><span>Click any LOS above, or use the sidebar, to begin. Every theory view ends with active-recall flashcards. Press <span class="kbd">Enter</span> from any view to jump to the next one.</span></div>
+    </div>
+
+    <div class="view" id="view-a">
+      <div class="module-tag">Module 3.1 · Types of Learning &amp; Overfitting Problems</div>
+      <span class="los-tag">LOS 3.a</span>
+      <h1 class="section-title">Supervised, Unsupervised &amp; Deep Learning</h1>
+      <p class="section-sub">Describe supervised ML, unsupervised ML, and deep learning; ML terminology and algorithm choice.</p>
+      <div class="theory"><p>The statistical models covered so far rely on assumptions about the distribution of the underlying data. <strong>Machine learning (ML)</strong> requires no such assumptions. ML is the use of <strong>algorithms to make decisions by generalizing (finding patterns) in a given data set</strong> — "find the pattern, apply the pattern." It performs better than standard statistical approaches when there are <strong>many variables (high dimension)</strong> and when relationships are <strong>nonlinear</strong>.</p>
+<h4>ML terminology</h4><div class="grid-2"><div class="value-card"><h5>Target variable</h5><p>The dependent variable (the y variable). Can be <strong>continuous, categorical, or ordinal</strong>.</p></div><div class="value-card"><h5>Features</h5><p>The independent variables (the x variables).</p></div><div class="value-card"><h5>Training dataset</h5><p>The sample used to fit the model.</p></div><div class="value-card"><h5>Hyperparameter</h5><p>A model input <strong>specified by the researcher</strong> (not learned from the data), e.g., k in KNN/k-means, λ in LASSO.</p></div></div>
+<h4>Three families of ML (slide overview)</h4><div class="grid-3"><div class="value-card"><h5>Supervised learning</h5><p>Uses <strong>labeled</strong> training data (target variable is defined) to guide the program toward better forecasts.</p></div><div class="value-card"><h5>Unsupervised learning</h5><p>Features are given <strong>without labels/conclusions</strong>; the program finds structure on its own.</p></div><div class="value-card"><h5>Reinforcement learning</h5><p>The program <strong>learns from its own output and prediction errors</strong>, seeking to maximize a reward.</p></div></div>
+<h4>Supervised learning</h4>
+<p>Example: to identify <strong>earnings manipulators</strong>, supply many attributes for known manipulators and known non-manipulators; the program learns patterns to flag manipulators in a new data set. <strong>Multiple regression is itself a supervised learning method.</strong> Two typical tasks:</p><table class="dtable"><thead><tr><th>Task</th><th>Target variable</th><th>Examples</th></tr></thead><tbody><tr><td>Regression</td><td>Continuous (numeric label)</td><td>House-price prediction</td></tr><tr><td>Classification</td><td>Categorical or ordinal (e.g., a ranking)</td><td><strong>Binary:</strong> likely to default vs. not. <strong>Multicategory:</strong> bond ratings class</td></tr></tbody></table>
+<h4>Unsupervised learning</h4>
+<p>No labeled training data and <strong>no target variable</strong>: inputs (features) are provided without any conclusions. The program seeks <strong>structure or interrelationships</strong> in the data. <strong>Clustering</strong> is the standard example.</p>
+<h4>Deep learning and reinforcement learning</h4>
+<p><strong>Deep learning</strong> algorithms handle complex tasks such as <strong>image recognition and natural language processing</strong>; they are built on <strong>neural networks</strong> (ML algorithms for problems with significant nonlinearities) and learn from a training set, then apply that learning to new data. Programs that <strong>learn from their own output and prediction errors</strong> are <strong>reinforcement learning</strong> algorithms.</p><div class="callout"><div class="callout-label">Slide analogy — reinforcement learning</div>A dog fetching a ball: the <strong>dog = learning algorithm/agent</strong>; the <strong>environment</strong> = where you and the dog play; the <strong>action</strong> = fetching the ball; the <strong>reward</strong> = the treat (positive if fetched; perhaps nonexistent, or even negative, if not).</div>
+<h4>Figure 3.1 — ML algorithm types (redrawn)</h4><table class="dtable"><thead><tr><th>Variable type</th><th>Supervised (target variable)</th><th>Unsupervised (no target variable)</th></tr></thead><tbody><tr><td>Continuous</td><td><strong>Regression:</strong> linear / penalized regression (LASSO), logistic, CART, random forest</td><td><strong>Dimension reduction:</strong> PCA. <strong>Clustering:</strong> k-means, hierarchical</td></tr><tr><td>Categorical</td><td><strong>Classification:</strong> logistic, SVM, KNN, CART</td><td><strong>Dimension reduction:</strong> PCA. <strong>Clustering:</strong> k-means, hierarchical</td></tr><tr><td>Continuous or categorical</td><td>Neural networks, deep learning, reinforcement learning</td><td>Neural networks, deep learning, reinforcement learning</td></tr></tbody></table>
+<h4>Figure 3.2 — Choosing the algorithm (redrawn, with the slide flowchart)</h4>
+<div class="steps-flow"><div class="step-node"><strong>Step 1</strong><br>Is the data complex (too many features)? If so, apply <strong>dimension reduction (PCA)</strong> first.</div><div class="step-connector">→</div><div class="step-node"><strong>Step 2</strong><br>Numerical prediction (not classification)? <strong>Linear:</strong> penalized regression. <strong>Nonlinear/complex:</strong> CART, random forest, neural networks.</div><div class="step-connector">→</div><div class="step-node"><strong>Step 3</strong><br>Supervised classification? <strong>Linear:</strong> KNN or SVM. <strong>Nonlinear/complex:</strong> CART, random forest, neural networks.</div><div class="step-connector">→</div><div class="step-node"><strong>Step 4</strong><br>Unsupervised? <strong>Linear:</strong> k-means if the number of categories is known; hierarchical if unknown. <strong>Nonlinear:</strong> neural networks.</div></div><div class="callout"><div class="callout-label">Key Concepts — LOS 3.a</div><strong>Supervised:</strong> inputs and outputs are identified; labeled data model the relationship. <strong>Unsupervised:</strong> unlabeled data; the algorithm determines structure. <strong>Deep learning</strong> (neural networks, reinforcement learning) learns from its own prediction errors and is used for complex tasks such as image recognition and NLP.</div><h4>Figures — algorithm selection</h4><div class="growth-chart"><svg viewBox="0 0 520 396" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ar1" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--text-dim)"/></marker></defs><polygon points="10,30.0 90,10 170,30.0 90,50" fill="var(--surface-2)" stroke="var(--blue)" stroke-width="1.6"/><text x="90" y="27.5" font-size="9.5" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Too many</text><text x="90" y="38.5" font-size="9.5" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">features?</text><line x1="170" y1="30.0" x2="205" y2="30" stroke="var(--blue)" stroke-width="1.2"  /><rect x="205" y="10" width="305" height="40" rx="6" fill="var(--surface)" stroke="var(--blue)" stroke-width="1.4" /><text x="357" y="34.0" font-size="10.5" text-anchor="middle" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">Yes → apply dimension reduction (PCA) first</text><text x="90" y="63" font-size="10" text-anchor="middle" fill="var(--text-dim)" font-weight="400" font-family="Inter,sans-serif">No ↓</text><polygon points="10,115.0 90,72 170,115.0 90,158" fill="var(--surface-2)" stroke="var(--green)" stroke-width="1.6"/><text x="90" y="107.0" font-size="9.5" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Supervised:</text><text x="90" y="118.0" font-size="9.5" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">numerical</text><text x="90" y="129.0" font-size="9.5" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">prediction</text><line x1="170" y1="115.0" x2="205" y2="92" stroke="var(--green)" stroke-width="1.2"  /><rect x="205" y="72" width="305" height="40" rx="6" fill="var(--surface)" stroke="var(--green)" stroke-width="1.4" /><text x="357" y="96.0" font-size="10.5" text-anchor="middle" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">Linear data → Penalized regression</text><line x1="170" y1="115.0" x2="205" y2="138" stroke="var(--green)" stroke-width="1.2"  /><rect x="205" y="118" width="305" height="40" rx="6" fill="var(--surface)" stroke="var(--green)" stroke-width="1.4" /><text x="357" y="136.0" font-size="10.5" text-anchor="middle" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">Nonlinear / complex → CART, random forest,</text><text x="357" y="148.0" font-size="10.5" text-anchor="middle" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">neural networks</text><text x="90" y="171" font-size="10" text-anchor="middle" fill="var(--text-dim)" font-weight="400" font-family="Inter,sans-serif">No ↓</text><polygon points="10,223.0 90,180 170,223.0 90,266" fill="var(--surface-2)" stroke="var(--gold)" stroke-width="1.6"/><text x="90" y="220.5" font-size="9.5" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Supervised:</text><text x="90" y="231.5" font-size="9.5" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">classification?</text><line x1="170" y1="223.0" x2="205" y2="200" stroke="var(--gold)" stroke-width="1.2"  /><rect x="205" y="180" width="305" height="40" rx="6" fill="var(--surface)" stroke="var(--gold)" stroke-width="1.4" /><text x="357" y="204.0" font-size="10.5" text-anchor="middle" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">Linear data → KNN or SVM</text><line x1="170" y1="223.0" x2="205" y2="246" stroke="var(--gold)" stroke-width="1.2"  /><rect x="205" y="226" width="305" height="40" rx="6" fill="var(--surface)" stroke="var(--gold)" stroke-width="1.4" /><text x="357" y="244.0" font-size="10.5" text-anchor="middle" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">Nonlinear / complex → CART, random forest,</text><text x="357" y="256.0" font-size="10.5" text-anchor="middle" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">neural networks</text><text x="90" y="279" font-size="10" text-anchor="middle" fill="var(--text-dim)" font-weight="400" font-family="Inter,sans-serif">No ↓</text><polygon points="10,331.0 90,288 170,331.0 90,374" fill="var(--surface-2)" stroke="var(--rust)" stroke-width="1.6"/><text x="90" y="334.0" font-size="9.5" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Unsupervised?</text><line x1="170" y1="331.0" x2="205" y2="308" stroke="var(--rust)" stroke-width="1.2"  /><rect x="205" y="288" width="305" height="40" rx="6" fill="var(--surface)" stroke="var(--rust)" stroke-width="1.4" /><text x="357" y="306.0" font-size="10.5" text-anchor="middle" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">Linear: k-means (k known) or hierarchical (k</text><text x="357" y="318.0" font-size="10.5" text-anchor="middle" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">unknown)</text><line x1="170" y1="331.0" x2="205" y2="354" stroke="var(--rust)" stroke-width="1.2"  /><rect x="205" y="334" width="305" height="40" rx="6" fill="var(--surface)" stroke="var(--rust)" stroke-width="1.4" /><text x="357" y="358.0" font-size="10.5" text-anchor="middle" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">Nonlinear / complex → neural networks</text></svg><p style="font-size:12px;color:var(--text-dim);text-align:center;margin:8px 0 0;">Figure 3.2 — Choice of ML algorithm (redrawn; slide flowchart)</p></div></div>
+      <div class="deck-block">
+        <h3>🔁 Active Recall — LOS 3.a</h3>
+        <div class="deck-holder" id="deck-holder-a"></div>
+      </div>
+    </div>
+    <div class="view" id="view-b">
+      <div class="module-tag">Module 3.1 · Types of Learning &amp; Overfitting Problems</div>
+      <span class="los-tag">LOS 3.b</span>
+      <h1 class="section-title">Overfitting and How to Address It</h1>
+      <p class="section-sub">Describe overfitting and identify methods of addressing it.</p>
+      <div class="theory"><p><strong>Overfitting</strong> is an issue with <strong>supervised ML</strong> that arises when a <strong>large number of features</strong> is included. The model treats <strong>noise as pattern</strong> (randomness misperceived as signal), giving a <strong>high in-sample R²</strong>, but forecasts on other data are less accurate: overfit models <strong>do not generalize</strong> (low out-of-sample R²).</p><div class="callout"><div class="callout-label">Professor's Note</div>A model that <strong>generalizes well</strong> retains its explanatory power when applied to new (out-of-sample) data.</div>
+<h4>Three nonoverlapping data sets</h4><div class="grid-3"><div class="value-card"><h5>Training sample</h5><p>Used to <strong>develop (fit)</strong> the model.</p></div><div class="value-card"><h5>Validation sample</h5><p>Used for <strong>tuning</strong> the model.</p></div><div class="value-card"><h5>Test sample</h5><p>Used to <strong>evaluate</strong> the model on new data (e.g., 80% train / 20% test, or train / validation / test).</p></div></div><p>Prediction errors in the training and validation samples are <strong>in-sample errors</strong>; errors in the test sample are the <strong>out-of-sample error</strong>.</p>
+<h4>Three types of error</h4><div class="grid-3"><div class="value-card"><h5>Bias error</h5><p>In-sample error from a model with a <strong>poor fit</strong> (underfitting).</p></div><div class="value-card"><h5>Variance error</h5><p>Out-of-sample error from an <strong>overfit</strong> model that does not generalize.</p></div><div class="value-card"><h5>Base error</h5><p>Residual error due to <strong>random noise</strong>; cannot be removed.</p></div></div><div class="formula-box"><div class="label">Error decomposition</div><div class="eq">Out-of-sample error = bias error + variance error + base error</div></div>
+<h4>Learning curves (Figure 3.3, redrawn)</h4>
+<p>A <strong>learning curve</strong> plots the <strong>accuracy rate (1 − error rate)</strong> in the validation/test sample against the <strong>size of the training sample</strong>.</p><table class="dtable"><thead><tr><th>Pattern</th><th>In-sample accuracy</th><th>Out-of-sample accuracy</th><th>Diagnosis</th></tr></thead><tbody><tr><td>High bias error</td><td>Converges, but <strong>far below</strong> the desired level</td><td>Converges to the same low level</td><td>Underfit — too simple</td></tr><tr><td>High variance error</td><td>Converges toward the desired level</td><td><strong>Lags far behind</strong> in-sample</td><td>Overfit — does not generalize</td></tr><tr><td>Robust (good fit)</td><td>Improves toward desired level</td><td>Improves and <strong>converges</strong> with in-sample at the desired level</td><td>Well generalizing</td></tr></tbody></table>
+<h4>Complexity trade-off</h4>
+<p><strong>Variance error rises with model complexity; bias error falls.</strong> Linear models tend to have high bias error; nonlinear models tend to have high variance error. This is the trade-off between cost and complexity. An <strong>optimal complexity minimizes total error</strong> and is key to generalization. Slide illustration: underfit (too-simple boundary), overfit (wiggly boundary fitting noise), good fit.</p>
+<h4>Remedies for overfitting</h4><div class="grid-2"><div class="value-card"><h5>Complexity reduction</h5><p>A <strong>penalty</strong> excludes features that do not meaningfully contribute to out-of-sample accuracy; the penalty <strong>increases with the number of features</strong> used.</p></div><div class="value-card"><h5>Cross validation</h5><p>Estimates out-of-sample error directly from the validation sample. Training and validation data must be <strong>large and representative</strong> of the population.</p></div></div>
+<h4>k-fold cross validation</h4>
+<p>Randomly divide the sample <strong>equally into k parts</strong>. Training uses <strong>(k − 1) parts</strong>, with <strong>one part left for validation</strong>. Error is measured, and the process is repeated <strong>k times</strong> (each part serves once as the validation fold); the <strong>average in-sample and out-of-sample error rates</strong> are compiled. In 5-fold validation, iterations 1st–5th each hold out a different fold.</p><div class="formula-box"><div class="label">k-fold performance</div><div class="eq">Performance = (1/k) × Σ Performance<sub>i</sub></div><div class="fdef">i = 1 … k folds</div></div><div class="callout"><div class="callout-label">Key Concepts — LOS 3.b</div>Overfitting = too many features → overly complex model that generalizes noise (high in-sample, low out-of-sample accuracy). Fix with <strong>complexity reduction</strong> (penalty on features) and <strong>cross validation</strong>.</div><h4>Figures — learning curves, bias–variance, fitting, cross validation</h4><div class="growth-chart"><svg viewBox="0 0 520 178" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ar2" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--text-dim)"/></marker></defs><line x1="22" y1="30" x2="22" y2="150" stroke="var(--text-dim)" stroke-width="1.4"  /><line x1="22" y1="150" x2="168" y2="150" stroke="var(--text-dim)" stroke-width="1.4"  /><line x1="22" y1="51.0" x2="168" y2="51.0" stroke="var(--gold)" stroke-width="1.3" stroke-dasharray="4 3" /><text x="28" y="47.0" font-size="8.5" text-anchor="start" fill="var(--gold-soft)" font-weight="400" font-family="Inter,sans-serif">desired accuracy</text><path d="M26.8,65.5 L31.6,70.4 L36.4,74.5 L41.2,78.0 L46.0,80.9 L50.8,83.4 L55.6,85.6 L60.4,87.3 L65.2,88.9 L70.0,90.1 L74.8,91.2 L79.6,92.1 L84.4,92.9 L89.2,93.6 L94.0,94.1 L98.8,94.6 L103.6,95.0 L108.4,95.3 L113.2,95.6 L118.0,95.9 L122.8,96.1 L127.6,96.2 L132.4,96.4 L137.2,96.5 L142.0,96.6 L146.8,96.7 L151.6,96.8 L156.4,96.8 L161.2,96.9 L166.0,96.9" fill="none" stroke="var(--blue)" stroke-width="2.2" /><path d="M26.8,131.7 L31.6,127.4 L36.4,123.8 L41.2,120.7 L46.0,118.1 L50.8,115.9 L55.6,114.1 L60.4,112.5 L65.2,111.2 L70.0,110.0 L74.8,109.1 L79.6,108.3 L84.4,107.6 L89.2,107.0 L94.0,106.5 L98.8,106.1 L103.6,105.7 L108.4,105.4 L113.2,105.2 L118.0,105.0 L122.8,104.8 L127.6,104.6 L132.4,104.5 L137.2,104.4 L142.0,104.3 L146.8,104.2 L151.6,104.2 L156.4,104.1 L161.2,104.1 L166.0,104.0" fill="none" stroke="var(--rust)" stroke-width="2.2" stroke-dasharray="5 3"/><text x="95" y="20" font-size="11" text-anchor="middle" fill="var(--text)" font-weight="700" font-family="Inter,sans-serif">High bias error</text><text x="95" y="168" font-size="9.5" text-anchor="middle" fill="var(--text-dim)" font-weight="400" font-family="Inter,sans-serif">Training sample size →</text><text transform="rotate(-90 12 90)" x="12" y="90" font-size="9" text-anchor="middle" fill="var(--text-dim)" font-weight="400" font-family="Inter,sans-serif">Accuracy</text><line x1="194" y1="30" x2="194" y2="150" stroke="var(--text-dim)" stroke-width="1.4"  /><line x1="194" y1="150" x2="340" y2="150" stroke="var(--text-dim)" stroke-width="1.4"  /><line x1="194" y1="51.0" x2="340" y2="51.0" stroke="var(--gold)" stroke-width="1.3" stroke-dasharray="4 3" /><path d="M198.8,44.6 L203.6,46.6 L208.4,48.3 L213.2,49.7 L218.0,50.9 L222.8,51.9 L227.6,52.8 L232.4,53.5 L237.2,54.2 L242.0,54.7 L246.8,55.1 L251.6,55.5 L256.4,55.8 L261.2,56.1 L266.0,56.3 L270.8,56.5 L275.6,56.7 L280.4,56.8 L285.2,57.0 L290.0,57.1 L294.8,57.1 L299.6,57.2 L304.4,57.3 L309.2,57.3 L314.0,57.4 L318.8,57.4 L323.6,57.4 L328.4,57.5 L333.2,57.5 L338.0,57.5" fill="none" stroke="var(--blue)" stroke-width="2.2" /><path d="M198.8,135.3 L203.6,132.1 L208.4,129.5 L213.2,127.2 L218.0,125.3 L222.8,123.7 L227.6,122.3 L232.4,121.2 L237.2,120.2 L242.0,119.4 L246.8,118.7 L251.6,118.1 L256.4,117.6 L261.2,117.1 L266.0,116.8 L270.8,116.5 L275.6,116.2 L280.4,116.0 L285.2,115.8 L290.0,115.7 L294.8,115.5 L299.6,115.4 L304.4,115.3 L309.2,115.2 L314.0,115.2 L318.8,115.1 L323.6,115.1 L328.4,115.0 L333.2,115.0 L338.0,115.0" fill="none" stroke="var(--rust)" stroke-width="2.2" stroke-dasharray="5 3"/><text x="267" y="20" font-size="11" text-anchor="middle" fill="var(--text)" font-weight="700" font-family="Inter,sans-serif">High variance error</text><text x="267" y="168" font-size="9.5" text-anchor="middle" fill="var(--text-dim)" font-weight="400" font-family="Inter,sans-serif">Training sample size →</text><text transform="rotate(-90 184 90)" x="184" y="90" font-size="9" text-anchor="middle" fill="var(--text-dim)" font-weight="400" font-family="Inter,sans-serif">Accuracy</text><line x1="366" y1="30" x2="366" y2="150" stroke="var(--text-dim)" stroke-width="1.4"  /><line x1="366" y1="150" x2="512" y2="150" stroke="var(--text-dim)" stroke-width="1.4"  /><line x1="366" y1="51.0" x2="512" y2="51.0" stroke="var(--gold)" stroke-width="1.3" stroke-dasharray="4 3" /><path d="M370.8,45.2 L375.6,46.7 L380.4,48.1 L385.2,49.2 L390.0,50.1 L394.8,50.9 L399.6,51.6 L404.4,52.2 L409.2,52.7 L414.0,53.1 L418.8,53.5 L423.6,53.8 L428.4,54.0 L433.2,54.2 L438.0,54.4 L442.8,54.6 L447.6,54.7 L452.4,54.8 L457.2,54.9 L462.0,55.0 L466.8,55.0 L471.6,55.1 L476.4,55.1 L481.2,55.2 L486.0,55.2 L490.8,55.2 L495.6,55.3 L500.4,55.3 L505.2,55.3 L510.0,55.3" fill="none" stroke="var(--blue)" stroke-width="2.2" /><path d="M370.8,94.1 L375.6,88.7 L380.4,84.1 L385.2,80.2 L390.0,76.9 L394.8,74.1 L399.6,71.7 L404.4,69.7 L409.2,68.0 L414.0,66.6 L418.8,65.4 L423.6,64.4 L428.4,63.5 L433.2,62.8 L438.0,62.1 L442.8,61.6 L447.6,61.2 L452.4,60.8 L457.2,60.5 L462.0,60.2 L466.8,60.0 L471.6,59.8 L476.4,59.6 L481.2,59.5 L486.0,59.3 L490.8,59.2 L495.6,59.2 L500.4,59.1 L505.2,59.0 L510.0,59.0" fill="none" stroke="var(--rust)" stroke-width="2.2" stroke-dasharray="5 3"/><text x="439" y="20" font-size="11" text-anchor="middle" fill="var(--text)" font-weight="700" font-family="Inter,sans-serif">Robust model</text><text x="439" y="168" font-size="9.5" text-anchor="middle" fill="var(--text-dim)" font-weight="400" font-family="Inter,sans-serif">Training sample size →</text><text transform="rotate(-90 356 90)" x="356" y="90" font-size="9" text-anchor="middle" fill="var(--text-dim)" font-weight="400" font-family="Inter,sans-serif">Accuracy</text></svg><div class="growth-legend"><span><i class="legend-dot" style="background:var(--blue)"></i>In-sample accuracy</span><span><i class="legend-dot" style="background:var(--rust)"></i>Out-of-sample accuracy (dashed)</span><span><i class="legend-dot" style="background:var(--gold)"></i>Desired accuracy</span></div><p style="font-size:12px;color:var(--text-dim);text-align:center;margin:8px 0 0;">Figure 3.3 — Accuracy rate patterns / learning curves (redrawn)</p></div><div class="growth-chart"><svg viewBox="0 0 520 196" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ar3" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--text-dim)"/></marker></defs><line x1="40" y1="15" x2="40" y2="170" stroke="var(--text-dim)" stroke-width="1.4"  /><line x1="40" y1="170" x2="500" y2="170" stroke="var(--text-dim)" stroke-width="1.4"  /><path d="M46.1,48.7 L52.2,58.5 L58.2,67.0 L64.3,74.3 L70.4,80.8 L76.5,86.4 L82.6,91.4 L88.6,95.9 L94.7,100.0 L100.8,103.7 L106.9,107.0 L113.0,110.0 L119.1,112.8 L125.1,115.4 L131.2,117.8 L137.3,120.0 L143.4,122.0 L149.5,123.9 L155.5,125.7 L161.6,127.3 L167.7,128.9 L173.8,130.3 L179.9,131.7 L185.9,133.0 L192.0,134.2 L198.1,135.4 L204.2,136.5 L210.3,137.5 L216.4,138.5 L222.4,139.4 L228.5,140.3 L234.6,141.2 L240.7,142.0 L246.8,142.8 L252.8,143.5 L258.9,144.2 L265.0,144.9 L271.1,145.6 L277.2,146.2 L283.2,146.8 L289.3,147.4 L295.4,147.9 L301.5,148.5 L307.6,149.0 L313.6,149.5 L319.7,150.0 L325.8,150.4 L331.9,150.9 L338.0,151.3 L344.1,151.8 L350.1,152.2 L356.2,152.6 L362.3,152.9 L368.4,153.3 L374.5,153.7 L380.5,154.0 L386.6,154.4 L392.7,154.7 L398.8,155.0 L404.9,155.3 L410.9,155.6 L417.0,155.9 L423.1,156.2 L429.2,156.5 L435.3,156.7 L441.4,157.0 L447.4,157.3 L453.5,157.5 L459.6,157.8 L465.7,158.0 L471.8,158.2 L477.8,158.4 L483.9,158.7 L490.0,158.9" fill="none" stroke="var(--blue)" stroke-width="2.2" /><path d="M46.1,166.5 L52.2,166.3 L58.2,166.0 L64.3,165.7 L70.4,165.4 L76.5,165.0 L82.6,164.7 L88.6,164.2 L94.7,163.8 L100.8,163.3 L106.9,162.7 L113.0,162.2 L119.1,161.5 L125.1,160.9 L131.2,160.2 L137.3,159.5 L143.4,158.8 L149.5,158.0 L155.5,157.1 L161.6,156.3 L167.7,155.4 L173.8,154.4 L179.9,153.5 L185.9,152.4 L192.0,151.4 L198.1,150.3 L204.2,149.2 L210.3,148.0 L216.4,146.8 L222.4,145.6 L228.5,144.3 L234.6,142.9 L240.7,141.6 L246.8,140.2 L252.8,138.8 L258.9,137.3 L265.0,135.8 L271.1,134.2 L277.2,132.6 L283.2,131.0 L289.3,129.3 L295.4,127.6 L301.5,125.8 L307.6,124.0 L313.6,122.2 L319.7,120.3 L325.8,118.4 L331.9,116.5 L338.0,114.5 L344.1,112.5 L350.1,110.4 L356.2,108.3 L362.3,106.1 L368.4,103.9 L374.5,101.7 L380.5,99.4 L386.6,97.1 L392.7,94.7 L398.8,92.3 L404.9,89.9 L410.9,87.4 L417.0,84.9 L423.1,82.3 L429.2,79.7 L435.3,77.1 L441.4,74.4 L447.4,71.7 L453.5,68.9 L459.6,66.1 L465.7,63.2 L471.8,60.3 L477.8,57.4 L483.9,54.4 L490.0,51.4" fill="none" stroke="var(--rust)" stroke-width="2.2" /><path d="M46.1,28.4 L52.2,38.0 L58.2,46.2 L64.3,53.3 L70.4,59.4 L76.5,64.7 L82.6,69.3 L88.6,73.4 L94.7,77.0 L100.8,80.1 L106.9,82.9 L113.0,85.4 L119.1,87.6 L125.1,89.5 L131.2,91.2 L137.3,92.7 L143.4,94.0 L149.5,95.1 L155.5,96.0 L161.6,96.8 L167.7,97.4 L173.8,98.0 L179.9,98.4 L185.9,98.6 L192.0,98.8 L198.1,98.9 L204.2,98.8 L210.3,98.7 L216.4,98.5 L222.4,98.2 L228.5,97.8 L234.6,97.3 L240.7,96.8 L246.8,96.2 L252.8,95.5 L258.9,94.7 L265.0,93.9 L271.1,93.0 L277.2,92.0 L283.2,91.0 L289.3,89.9 L295.4,88.7 L301.5,87.5 L307.6,86.2 L313.6,84.9 L319.7,83.5 L325.8,82.1 L331.9,80.6 L338.0,79.0 L344.1,77.4 L350.1,75.7 L356.2,74.0 L362.3,72.2 L368.4,70.4 L374.5,68.5 L380.5,66.6 L386.6,64.6 L392.7,62.6 L398.8,60.5 L404.9,58.4 L410.9,56.2 L417.0,54.0 L423.1,51.7 L429.2,49.4 L435.3,47.0 L441.4,44.6 L447.4,42.1 L453.5,39.6 L459.6,37.0 L465.7,34.4 L471.8,31.8 L477.8,29.1 L483.9,26.3 L490.0,23.5" fill="none" stroke="var(--green)" stroke-width="2.8" /><line x1="198.10810810810813" y1="15" x2="198.10810810810813" y2="170" stroke="var(--gold)" stroke-width="1.3" stroke-dasharray="5 3" /><text x="198.10810810810813" y="12" font-size="10.5" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Optimal complexity</text><text x="270" y="188" font-size="10" text-anchor="middle" fill="var(--text-dim)" font-weight="400" font-family="Inter,sans-serif">Model complexity →</text><text transform="rotate(-90 30 95)" x="30" y="95" font-size="10" text-anchor="middle" fill="var(--text-dim)" font-weight="400" font-family="Inter,sans-serif">Error</text></svg><div class="growth-legend"><span><i class="legend-dot" style="background:var(--blue)"></i>Bias error (falls with complexity)</span><span><i class="legend-dot" style="background:var(--rust)"></i>Variance error (rises)</span><span><i class="legend-dot" style="background:var(--green)"></i>Total error</span></div><p style="font-size:12px;color:var(--text-dim);text-align:center;margin:8px 0 0;">Bias–variance trade-off (slide Exhibit 5, redrawn): total error is minimized at optimal complexity</p></div><div class="growth-chart"><svg viewBox="0 0 520 175" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ar4" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--text-dim)"/></marker></defs><rect x="10" y="25" width="160" height="140" rx="4" fill="var(--surface)" stroke="var(--border)" stroke-width="1.4" /><text x="90" y="18" font-size="12" text-anchor="middle" fill="var(--text)" font-weight="700" font-family="Inter,sans-serif">Underfit</text><line x1="50" y1="28" x2="130" y2="160" stroke="var(--text)" stroke-width="2"  /><circle cx="40.4" cy="65" r="3.6" fill="var(--gold)"/><circle cx="56.24" cy="95" r="3.6" fill="var(--gold)"/><circle cx="75.6" cy="55" r="3.6" fill="var(--gold)"/><circle cx="62.4" cy="130" r="3.6" fill="var(--gold)"/><circle cx="44.8" cy="145" r="3.6" fill="var(--gold)"/><circle cx="84.4" cy="110" r="3.6" fill="var(--gold)"/><circle cx="68.56" cy="85" r="3.6" fill="var(--gold)"/><circle cx="93.2" cy="145" r="3.6" fill="var(--gold)"/><circle cx="102.0" cy="80" r="3.6" fill="var(--gold)"/><circle cx="49.2" cy="115" r="3.6" fill="var(--gold)"/><rect x="142.5" y="61.5" width="7" height="7" fill="var(--green)"/><rect x="124.9" y="91.5" width="7" height="7" fill="var(--green)"/><rect x="151.3" y="111.5" width="7" height="7" fill="var(--green)"/><rect x="116.1" y="131.5" width="7" height="7" fill="var(--green)"/><rect x="138.1" y="146.5" width="7" height="7" fill="var(--green)"/><rect x="160.1" y="81.5" width="7" height="7" fill="var(--green)"/><rect x="107.3" y="51.5" width="7" height="7" fill="var(--green)"/><rect x="146.9" y="136.5" width="7" height="7" fill="var(--green)"/><rect x="120.5" y="71.5" width="7" height="7" fill="var(--green)"/><rect x="94.1" y="121.5" width="7" height="7" fill="var(--green)"/><rect x="182" y="25" width="160" height="140" rx="4" fill="var(--surface)" stroke="var(--border)" stroke-width="1.4" /><text x="262" y="18" font-size="12" text-anchor="middle" fill="var(--text)" font-weight="700" font-family="Inter,sans-serif">Overfit</text><path d="M266.0,28.0 L248.0,50.0 L278.0,68.0 L240.0,92.0 L282.0,106.0 L252.0,128.0 L272.0,162.0" fill="none" stroke="var(--text)" stroke-width="2" /><circle cx="212.4" cy="65" r="3.6" fill="var(--gold)"/><circle cx="228.24" cy="95" r="3.6" fill="var(--gold)"/><circle cx="247.6" cy="55" r="3.6" fill="var(--gold)"/><circle cx="234.4" cy="130" r="3.6" fill="var(--gold)"/><circle cx="216.8" cy="145" r="3.6" fill="var(--gold)"/><circle cx="256.4" cy="110" r="3.6" fill="var(--gold)"/><circle cx="240.56" cy="85" r="3.6" fill="var(--gold)"/><circle cx="265.2" cy="145" r="3.6" fill="var(--gold)"/><circle cx="274.0" cy="80" r="3.6" fill="var(--gold)"/><circle cx="221.2" cy="115" r="3.6" fill="var(--gold)"/><rect x="314.5" y="61.5" width="7" height="7" fill="var(--green)"/><rect x="296.9" y="91.5" width="7" height="7" fill="var(--green)"/><rect x="323.3" y="111.5" width="7" height="7" fill="var(--green)"/><rect x="288.1" y="131.5" width="7" height="7" fill="var(--green)"/><rect x="310.1" y="146.5" width="7" height="7" fill="var(--green)"/><rect x="332.1" y="81.5" width="7" height="7" fill="var(--green)"/><rect x="279.3" y="51.5" width="7" height="7" fill="var(--green)"/><rect x="318.9" y="136.5" width="7" height="7" fill="var(--green)"/><rect x="292.5" y="71.5" width="7" height="7" fill="var(--green)"/><rect x="266.1" y="121.5" width="7" height="7" fill="var(--green)"/><rect x="354" y="25" width="160" height="140" rx="4" fill="var(--surface)" stroke="var(--border)" stroke-width="1.4" /><text x="434" y="18" font-size="12" text-anchor="middle" fill="var(--text)" font-weight="700" font-family="Inter,sans-serif">Good fit</text><path d="M436.0,28.0 L432.0,80.0 L436.0,162.0" fill="none" stroke="var(--text)" stroke-width="2" /><circle cx="384.4" cy="65" r="3.6" fill="var(--gold)"/><circle cx="400.24" cy="95" r="3.6" fill="var(--gold)"/><circle cx="419.6" cy="55" r="3.6" fill="var(--gold)"/><circle cx="406.4" cy="130" r="3.6" fill="var(--gold)"/><circle cx="388.8" cy="145" r="3.6" fill="var(--gold)"/><circle cx="428.4" cy="110" r="3.6" fill="var(--gold)"/><circle cx="412.56" cy="85" r="3.6" fill="var(--gold)"/><circle cx="437.2" cy="145" r="3.6" fill="var(--gold)"/><circle cx="446.0" cy="80" r="3.6" fill="var(--gold)"/><circle cx="393.2" cy="115" r="3.6" fill="var(--gold)"/><rect x="486.5" y="61.5" width="7" height="7" fill="var(--green)"/><rect x="468.9" y="91.5" width="7" height="7" fill="var(--green)"/><rect x="495.3" y="111.5" width="7" height="7" fill="var(--green)"/><rect x="460.1" y="131.5" width="7" height="7" fill="var(--green)"/><rect x="482.1" y="146.5" width="7" height="7" fill="var(--green)"/><rect x="504.1" y="81.5" width="7" height="7" fill="var(--green)"/><rect x="451.3" y="51.5" width="7" height="7" fill="var(--green)"/><rect x="490.9" y="136.5" width="7" height="7" fill="var(--green)"/><rect x="464.5" y="71.5" width="7" height="7" fill="var(--green)"/><rect x="438.1" y="121.5" width="7" height="7" fill="var(--green)"/></svg><div class="growth-legend"><span><i class="legend-dot" style="background:var(--gold)"></i>Class 1</span><span><i class="legend-dot" style="background:var(--green)"></i>Class 2</span></div><p style="font-size:12px;color:var(--text-dim);text-align:center;margin:8px 0 0;">Underfit (too simple, high bias) · Overfit (fits noise, high variance) · Good fit (slide)</p></div><div class="growth-chart"><svg viewBox="0 0 560 194" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ar5" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--text-dim)"/></marker></defs><text x="190" y="14" font-size="10.5" text-anchor="middle" fill="var(--text-muted)" font-weight="400" font-family="Inter,sans-serif">Validation fold (blue) · Training folds (grey)</text><text x="26" y="41" font-size="11" text-anchor="end" fill="var(--text-muted)" font-weight="600" font-family="Inter,sans-serif">1st</text><rect x="36" y="24" width="50" height="24" rx="3" fill="var(--blue)" stroke="var(--border)" stroke-width="1.4" /><rect x="92" y="24" width="50" height="24" rx="3" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><rect x="148" y="24" width="50" height="24" rx="3" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><rect x="204" y="24" width="50" height="24" rx="3" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><rect x="260" y="24" width="50" height="24" rx="3" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><text x="334" y="41" font-size="10.5" text-anchor="start" fill="var(--text-muted)" font-weight="400" font-family="Inter,sans-serif">Performance₁</text><text x="26" y="71" font-size="11" text-anchor="end" fill="var(--text-muted)" font-weight="600" font-family="Inter,sans-serif">2nd</text><rect x="36" y="54" width="50" height="24" rx="3" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><rect x="92" y="54" width="50" height="24" rx="3" fill="var(--blue)" stroke="var(--border)" stroke-width="1.4" /><rect x="148" y="54" width="50" height="24" rx="3" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><rect x="204" y="54" width="50" height="24" rx="3" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><rect x="260" y="54" width="50" height="24" rx="3" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><text x="334" y="71" font-size="10.5" text-anchor="start" fill="var(--text-muted)" font-weight="400" font-family="Inter,sans-serif">Performance₂</text><text x="26" y="101" font-size="11" text-anchor="end" fill="var(--text-muted)" font-weight="600" font-family="Inter,sans-serif">3rd</text><rect x="36" y="84" width="50" height="24" rx="3" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><rect x="92" y="84" width="50" height="24" rx="3" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><rect x="148" y="84" width="50" height="24" rx="3" fill="var(--blue)" stroke="var(--border)" stroke-width="1.4" /><rect x="204" y="84" width="50" height="24" rx="3" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><rect x="260" y="84" width="50" height="24" rx="3" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><text x="334" y="101" font-size="10.5" text-anchor="start" fill="var(--text-muted)" font-weight="400" font-family="Inter,sans-serif">Performance₃</text><text x="26" y="131" font-size="11" text-anchor="end" fill="var(--text-muted)" font-weight="600" font-family="Inter,sans-serif">4th</text><rect x="36" y="114" width="50" height="24" rx="3" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><rect x="92" y="114" width="50" height="24" rx="3" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><rect x="148" y="114" width="50" height="24" rx="3" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><rect x="204" y="114" width="50" height="24" rx="3" fill="var(--blue)" stroke="var(--border)" stroke-width="1.4" /><rect x="260" y="114" width="50" height="24" rx="3" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><text x="334" y="131" font-size="10.5" text-anchor="start" fill="var(--text-muted)" font-weight="400" font-family="Inter,sans-serif">Performance₄</text><text x="26" y="161" font-size="11" text-anchor="end" fill="var(--text-muted)" font-weight="600" font-family="Inter,sans-serif">5th</text><rect x="36" y="144" width="50" height="24" rx="3" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><rect x="92" y="144" width="50" height="24" rx="3" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><rect x="148" y="144" width="50" height="24" rx="3" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><rect x="204" y="144" width="50" height="24" rx="3" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><rect x="260" y="144" width="50" height="24" rx="3" fill="var(--blue)" stroke="var(--border)" stroke-width="1.4" /><text x="334" y="161" font-size="10.5" text-anchor="start" fill="var(--text-muted)" font-weight="400" font-family="Inter,sans-serif">Performance₅</text><text x="280" y="182" font-size="11" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Performance = (1/5) × sum of the 5 fold results</text></svg><p style="font-size:12px;color:var(--text-dim);text-align:center;margin:8px 0 0;">5-fold cross validation: each fold is the validation sample once; k − 1 folds train the model</p></div></div>
+      <div class="deck-block">
+        <h3>🔁 Active Recall — LOS 3.b</h3>
+        <div class="deck-holder" id="deck-holder-b"></div>
+      </div>
+    </div>
+    <div class="view" id="view-c">
+      <div class="module-tag">Module 3.2 · Supervised Learning Algorithms</div>
+      <span class="los-tag">LOS 3.c</span>
+      <h1 class="section-title">Supervised Learning Algorithms</h1>
+      <p class="section-sub">Penalized regression, SVM, KNN, CART, ensemble learning and random forest, and the problems each suits.</p>
+      <div class="theory"><h4>1. Penalized regression and LASSO</h4>
+<p>A form of linear regression that <strong>penalizes the size of the coefficients</strong> to reduce overfitting and manage multicollinearity. The penalty <strong>increases with the number of features</strong>, so features that do not contribute to out-of-sample accuracy are excluded (more <strong>parsimonious</strong> model). The model minimizes <strong>SSE plus a penalty</strong>.</p>
+<p><strong>LASSO</strong> (least absolute shrinkage and selection operator): in addition to SSE, it minimizes the <strong>sum of the absolute values of the slope coefficients</strong>. There is a trade-off between lowering SSE (more features) and the penalty for including them; optimization <strong>automatically eliminates the least predictive features</strong>. The penalty term <strong>λ (lambda)</strong> is the <strong>hyperparameter</strong> balancing overfitting against parsimony.</p><div class="formula-box"><div class="label">LASSO objective</div><div class="eq">Minimize  Σ(Y<sub>i</sub> − Ŷ<sub>i</sub>)<sup>2</sup> + λ Σ|b<sub>j</sub>|</div><div class="fdef">Σ(Y − Ŷ)² = SSE; λ = penalty hyperparameter; b<sub>j</sub> = slope coefficients.</div></div><p><strong>Regularization</strong> forces the beta coefficients of nonperforming features <strong>toward zero</strong>; it reduces statistical variability in high-dimension estimation and can be applied to nonlinear models (e.g., a stable covariance matrix for mean-variance optimization). Slide steps: (1) find the model minimizing SSE, (2) calculate SSE, (3) apply λ and recompute the error, (4) find the new model minimizing the new error.</p><div class="callout"><div class="callout-label">Professor's Note</div><strong>Parsimonious</strong> in statistics: a model that achieves the required explanation with <strong>as few predictor variables as possible</strong> (not "stingy").</div>
+<h4>2. Support vector machine (SVM)</h4>
+<p>A <strong>linear classification</strong> algorithm that separates data into one of <strong>two possible</strong> classes (e.g., sell vs. buy). With n features, an <strong>n-dimensional hyperplane</strong> divides the sample. SVM chooses the boundary <strong>farthest from all observations</strong>: a discriminant boundary plus <strong>margins</strong> on either side. The margins are set by the <strong>support vectors</strong> (observations closest to the boundary). Misclassified training observations are handled by <strong>soft margin classification</strong>, which optimizes the trade-off between a wider margin and classification error. A more complex nonlinear model can cut classification error but needs more features and risks overfitting.</p><div class="formula-box"><div class="label">SVM decision rule (slide)</div><div class="eq">f(x<sub>1</sub>,x<sub>2</sub>) = w<sub>1</sub>x<sub>1</sub> + w<sub>2</sub>x<sub>2</sub> + b</div><div class="fdef">Boundary: f = 0. Class 1 if f &gt; 0; class 0 if f ≤ 0.</div></div><p><strong>Applications:</strong> classifying debt issuers as likely vs. not likely to default, stocks to short vs. not, and text (news, press releases) as positive vs. negative.</p>
+<h4>3. K-nearest neighbor (KNN)</h4>
+<p>Classifies an observation by its <strong>nearness</strong> to observations in the training sample; more common in classification, sometimes regression. The researcher specifies <strong>k (hyperparameter)</strong>; the algorithm finds the k closest observations to the new one.</p><div class="grid-3"><div class="value-card"><h5>k too small</h5><p>High error rate.</p></div><div class="value-card"><h5>k too large</h5><p>Dilutes the result by averaging across too many outcomes.</p></div><div class="value-card"><h5>k even</h5><p>Ties are possible, with no clear winner.</p></div></div><p>KNN is a powerful <strong>nonparametric</strong> model (no assumptions about data distribution), but you must define "near": analysts need to understand the data and business to specify the <strong>distance metric</strong>. Irrelevant or correlated features can skew results. Slide: shuffle and randomly divide into k sub-samples, k − 1 for training and 1 for validation. <strong>Applications:</strong> predicting bankruptcy, assigning a bond to a ratings class, predicting stock prices, creating customized indices.</p>
+<h4>4. Classification and regression trees (CART)</h4>
+<p><strong>Classification trees</strong> suit a <strong>categorical</strong> target, typically binary (IPO successful vs. not). <strong>Regression trees</strong> suit a <strong>continuous</strong> target. Logit models also handle binary targets but are <strong>ill-suited to significant nonlinear relationships</strong>, where trees are an alternative. At each node the tree splits observations in two: the <strong>top feature</strong> (most important for the target) is chosen with a <strong>cutoff c</strong>; observations above c go to one class, the rest to the other; classes are then split on a second feature. Each split should lower estimation error; the tree stops when error cannot be reduced, at a <strong>terminal node</strong>. A feature <strong>may reappear</strong> lower in the tree with a different cutoff. Features and cutoffs are learned from labeled training data.</p>
+<div class="formula-box"><div class="label">Figure 3.4 — Classification tree (redrawn as text)</div><div class="eq">Root node → 2 decision nodes → each decision node splits into a decision node and a terminal node → lower decision nodes end in 2 terminal nodes each</div><div class="fdef">Root node = first (top-feature) split; decision nodes = further splits; terminal nodes = final classifications.</div></div>
+<p><strong>Avoiding overfitting:</strong> researcher-set regularization criteria (<strong>maximum tree depth, maximum number of decision nodes</strong>) or <strong>pruning</strong> sections with minimal explanatory power. CART is popular because it gives a <strong>visual explanation</strong> of the prediction process (unlike "black box" algorithms). <strong>Applications:</strong> detecting fraudulent financial statements; selecting stocks and bonds.</p>
+<h4>5. Ensemble learning and random forest</h4>
+<p><strong>Ensemble learning</strong> combines predictions from multiple models rather than one; the result is a <strong>lower average error rate</strong> because models cancel out noise (more accurate and stable).</p><div class="grid-2"><div class="value-card"><h5>Heterogeneous learners</h5><p>Different algorithms combined via a <strong>voting classifier</strong>; each votes and the majority wins. Diversity of approach gives greater confidence.</p></div><div class="value-card"><h5>Homogeneous learners</h5><p>Same algorithm on <strong>different training samples</strong>, derived by <strong>bootstrap aggregating (bagging)</strong>: random samples (bags) drawn <strong>with replacement</strong> from the initial training sample.</p></div></div><p><strong>Random forest</strong> is a variant of classification trees: a large number of trees trained on <strong>bagged data</strong> from the same data set, each using a <strong>randomly selected subset of features</strong>, so every tree differs. Using many trees to decide the final class is akin to <strong>crowdsourcing</strong>. Because each tree uses only a subset of features it <strong>mitigates overfitting</strong>; errors across trees tend to cancel, <strong>raising the signal-to-noise ratio</strong>. Drawback: the <strong>transparency of CART is lost</strong> — back to a black box. <strong>Applications:</strong> factor-based asset allocation; predicting IPO success.</p>
+<h4>Summary — which algorithm for which problem</h4><table class="dtable"><thead><tr><th>Algorithm</th><th>Type / target</th><th>Best suited for</th></tr></thead><tbody><tr><td>Penalized regression (LASSO)</td><td>Supervised, linear, continuous</td><td>Parsimonious models; many features</td></tr><tr><td>SVM</td><td>Supervised, linear binary classification</td><td>Two-class problems (default/no default, buy/sell, text sentiment)</td></tr><tr><td>KNN</td><td>Supervised classification (sometimes regression)</td><td>Classification by similarity; bond ratings, bankruptcy</td></tr><tr><td>CART</td><td>Supervised; categorical <em>or</em> continuous target</td><td>Nonlinear relationships; interpretable (visual) results</td></tr><tr><td>Ensemble / random forest</td><td>Supervised</td><td>Lower error, less overfitting; black box</td></tr></tbody></table><div class="callout"><div class="callout-label">Key Concepts — LOS 3.c</div>Penalized regression reduces overfitting by penalizing nonperforming features; SVM = linear 2-class separator via hyperplane; KNN = nearness; CART = classify categorical targets with nonlinear relations; ensemble = combine models for lower average error; random forest = many bagged classification trees.</div><h4>Figures — SVM, KNN, CART, random forest</h4><div class="growth-chart"><svg viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ar6" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--text-dim)"/></marker></defs><rect x="10" y="10" width="280" height="200" rx="4" fill="var(--surface)" stroke="var(--border)" stroke-width="1.4" /><line x1="30" y1="210" x2="230" y2="10" stroke="var(--text)" stroke-width="1.6"  /><line x1="10" y1="200" x2="200" y2="10" stroke="var(--gold)" stroke-width="1.6" stroke-dasharray="5 3" /><line x1="60" y1="210" x2="260" y2="10" stroke="var(--gold)" stroke-width="1.6" stroke-dasharray="5 3" /><circle cx="50" cy="70" r="4" fill="var(--green)"/><circle cx="70" cy="110" r="4" fill="var(--green)"/><circle cx="100" cy="60" r="4" fill="var(--green)"/><circle cx="60" cy="140" r="4" fill="var(--green)"/><circle cx="40" cy="110" r="4" fill="var(--green)"/><circle cx="110" cy="40" r="4" fill="var(--green)"/><rect x="176" y="106" width="8" height="8" fill="var(--blue)"/><rect x="206" y="96" width="8" height="8" fill="var(--blue)"/><rect x="156" y="136" width="8" height="8" fill="var(--blue)"/><rect x="226" y="66" width="8" height="8" fill="var(--blue)"/><rect x="216" y="126" width="8" height="8" fill="var(--blue)"/><rect x="136" y="156" width="8" height="8" fill="var(--blue)"/><circle cx="120" cy="90" r="4" fill="var(--green)"/><circle cx="120" cy="90" r="9" fill="none" stroke="var(--rust)" stroke-width="1.6"/><circle cx="90" cy="120" r="4" fill="var(--green)"/><circle cx="90" cy="120" r="9" fill="none" stroke="var(--rust)" stroke-width="1.6"/><rect x="196" y="66" width="8" height="8" fill="var(--blue)"/><circle cx="200" cy="70" r="9" fill="none" stroke="var(--rust)" stroke-width="1.6"/><rect x="136" y="126" width="8" height="8" fill="var(--blue)"/><circle cx="140" cy="130" r="9" fill="none" stroke="var(--rust)" stroke-width="1.6"/><text x="310" y="40" font-size="11" text-anchor="start" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Hyperplane (decision boundary): f = 0</text><text x="310" y="62" font-size="11" text-anchor="start" fill="var(--gold-soft)" font-weight="600" font-family="Inter,sans-serif">Dashed lines = margins</text><text x="310" y="84" font-size="11" text-anchor="start" fill="var(--rust)" font-weight="600" font-family="Inter,sans-serif">Circled points = support vectors</text><text x="310" y="120" font-size="11" text-anchor="start" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">f(x₁,x₂) = w₁x₁ + w₂x₂ + b</text><text x="310" y="140" font-size="11" text-anchor="start" fill="var(--blue-soft)" font-weight="400" font-family="Inter,sans-serif">f &gt; 0 → class 1 (blue squares)</text><text x="310" y="160" font-size="11" text-anchor="start" fill="var(--green-soft)" font-weight="400" font-family="Inter,sans-serif">f ≤ 0 → class 0 (green dots)</text></svg><p style="font-size:12px;color:var(--text-dim);text-align:center;margin:8px 0 0;">SVM: the boundary farthest from all observations; margins are set by the support vectors (slide, redrawn)</p></div><div class="growth-chart"><svg viewBox="0 0 640 220" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ar7" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--text-dim)"/></marker></defs><rect x="10" y="10" width="280" height="200" rx="4" fill="var(--surface)" stroke="var(--border)" stroke-width="1.4" /><circle cx="120" cy="105" r="4.5" fill="var(--green)"/><circle cx="135" cy="135" r="4.5" fill="var(--green)"/><circle cx="115" cy="130" r="4.5" fill="var(--green)"/><circle cx="60" cy="70" r="4.5" fill="var(--green)"/><circle cx="70" cy="160" r="4.5" fill="var(--green)"/><circle cx="90" cy="180" r="4.5" fill="var(--green)"/><circle cx="50" cy="120" r="4.5" fill="var(--green)"/><rect x="170.5" y="90.5" width="9" height="9" fill="var(--blue)"/><rect x="165.5" y="115.5" width="9" height="9" fill="var(--blue)"/><rect x="215.5" y="55.5" width="9" height="9" fill="var(--blue)"/><rect x="235.5" y="115.5" width="9" height="9" fill="var(--blue)"/><rect x="205.5" y="155.5" width="9" height="9" fill="var(--blue)"/><rect x="185.5" y="45.5" width="9" height="9" fill="var(--blue)"/><circle cx="150" cy="110" r="50" fill="none" stroke="var(--rust)" stroke-width="1.5" stroke-dasharray="5 3"/><polygon points="150,102 158,118 142,118" fill="var(--gold)" stroke="var(--text)" stroke-width="1"/><text x="310" y="50" font-size="11" text-anchor="start" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">New observation (gold triangle)</text><text x="310" y="76" font-size="11" text-anchor="start" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">Choose k = 5: dashed circle holds the</text><text x="310" y="92" font-size="11" text-anchor="start" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">5 nearest neighbors</text><text x="310" y="122" font-size="11" text-anchor="start" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">3 × class A (green) vs 2 × class B (blue)</text><text x="310" y="144" font-size="11" text-anchor="start" fill="var(--green-soft)" font-weight="700" font-family="Inter,sans-serif">→ assign to class A</text><text x="310" y="172" font-size="10.5" text-anchor="start" fill="var(--text-muted)" font-weight="400" font-family="Inter,sans-serif">k too small → high error; k too large → diluted;</text><text x="310" y="188" font-size="10.5" text-anchor="start" fill="var(--text-muted)" font-weight="400" font-family="Inter,sans-serif">k even → possible ties</text></svg><p style="font-size:12px;color:var(--text-dim);text-align:center;margin:8px 0 0;">K-nearest neighbor with k = 5 (slide example, redrawn)</p></div><div class="growth-chart"><svg viewBox="0 0 520 250" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ar8" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--text-dim)"/></marker></defs><line x1="260" y1="14" x2="140" y2="76" stroke="var(--blue)" stroke-width="1.5"  marker-end="url(#ar8)"/><line x1="260" y1="14" x2="380" y2="76" stroke="var(--blue)" stroke-width="1.5"  marker-end="url(#ar8)"/><line x1="140" y1="90" x2="110" y2="148" stroke="var(--blue)" stroke-width="1.5"  marker-end="url(#ar8)"/><line x1="140" y1="90" x2="260" y2="148" stroke="var(--blue)" stroke-width="1.5"  marker-end="url(#ar8)"/><line x1="380" y1="90" x2="260" y2="148" stroke="var(--blue)" stroke-width="1.5"  marker-end="url(#ar8)"/><line x1="380" y1="90" x2="410" y2="148" stroke="var(--blue)" stroke-width="1.5"  marker-end="url(#ar8)"/><line x1="110" y1="162" x2="60" y2="216" stroke="var(--blue)" stroke-width="1.5"  marker-end="url(#ar8)"/><line x1="110" y1="162" x2="160" y2="216" stroke="var(--blue)" stroke-width="1.5"  marker-end="url(#ar8)"/><line x1="410" y1="162" x2="360" y2="216" stroke="var(--blue)" stroke-width="1.5"  marker-end="url(#ar8)"/><line x1="410" y1="162" x2="460" y2="216" stroke="var(--blue)" stroke-width="1.5"  marker-end="url(#ar8)"/><rect x="212" y="0" width="96" height="28" rx="4" fill="var(--gold)" stroke="var(--border)" stroke-width="1.4" /><text x="260" y="18" font-size="10" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Root node</text><rect x="92" y="76" width="96" height="28" rx="4" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><text x="140" y="94" font-size="10" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Decision node</text><rect x="332" y="76" width="96" height="28" rx="4" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><text x="380" y="94" font-size="10" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Decision node</text><rect x="62" y="148" width="96" height="28" rx="4" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><text x="110" y="166" font-size="10" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Decision node</text><rect x="212" y="148" width="96" height="28" rx="4" fill="var(--green)" stroke="var(--border)" stroke-width="1.4" /><text x="260" y="166" font-size="10" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Terminal node</text><rect x="362" y="148" width="96" height="28" rx="4" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><text x="410" y="166" font-size="10" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Decision node</text><rect x="12" y="216" width="96" height="28" rx="4" fill="var(--green)" stroke="var(--border)" stroke-width="1.4" /><text x="60" y="234" font-size="10" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Terminal node</text><rect x="112" y="216" width="96" height="28" rx="4" fill="var(--green)" stroke="var(--border)" stroke-width="1.4" /><text x="160" y="234" font-size="10" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Terminal node</text><rect x="312" y="216" width="96" height="28" rx="4" fill="var(--green)" stroke="var(--border)" stroke-width="1.4" /><text x="360" y="234" font-size="10" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Terminal node</text><rect x="412" y="216" width="96" height="28" rx="4" fill="var(--green)" stroke="var(--border)" stroke-width="1.4" /><text x="460" y="234" font-size="10" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Terminal node</text></svg><div class="growth-legend"><span><i class="legend-dot" style="background:var(--gold)"></i>Root</span><span><i class="legend-dot" style="background:var(--surface-3)"></i>Decision node</span><span><i class="legend-dot" style="background:var(--green)"></i>Terminal node</span></div><p style="font-size:12px;color:var(--text-dim);text-align:center;margin:8px 0 0;">Figure 3.4 — Classification tree: top feature at the root, each split lowers error, stop at terminal nodes</p></div><div class="growth-chart"><svg viewBox="0 0 550 205" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ar9" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--text-dim)"/></marker></defs><rect x="10" y="70" width="90" height="50" rx="6" fill="var(--surface-3)" stroke="var(--border)" stroke-width="1.4" /><text x="55" y="92" font-size="11" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Training</text><text x="55" y="107" font-size="11" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">sample</text><line x1="100" y1="95" x2="140" y2="38" stroke="var(--text-dim)" stroke-width="1.3"  marker-end="url(#ar9)"/><rect x="140" y="12" width="100" height="52" rx="6" fill="var(--surface)" stroke="var(--blue)" stroke-width="1.4" /><text x="190" y="34" font-size="11" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Bag 1</text><text x="190" y="50" font-size="9" text-anchor="middle" fill="var(--text-muted)" font-weight="400" font-family="Inter,sans-serif">(with replacement)</text><line x1="240" y1="38" x2="280" y2="38" stroke="var(--text-dim)" stroke-width="1.3"  marker-end="url(#ar9)"/><rect x="280" y="12" width="110" height="52" rx="6" fill="var(--surface)" stroke="var(--green)" stroke-width="1.4" /><text x="335" y="34" font-size="11" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Tree 1</text><text x="335" y="50" font-size="9" text-anchor="middle" fill="var(--text-muted)" font-weight="400" font-family="Inter,sans-serif">random feature subset</text><line x1="390" y1="38" x2="430" y2="110" stroke="var(--text-dim)" stroke-width="1.3"  marker-end="url(#ar9)"/><line x1="100" y1="95" x2="140" y2="108" stroke="var(--text-dim)" stroke-width="1.3"  marker-end="url(#ar9)"/><rect x="140" y="82" width="100" height="52" rx="6" fill="var(--surface)" stroke="var(--blue)" stroke-width="1.4" /><text x="190" y="104" font-size="11" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Bag 2</text><text x="190" y="120" font-size="9" text-anchor="middle" fill="var(--text-muted)" font-weight="400" font-family="Inter,sans-serif">(with replacement)</text><line x1="240" y1="108" x2="280" y2="108" stroke="var(--text-dim)" stroke-width="1.3"  marker-end="url(#ar9)"/><rect x="280" y="82" width="110" height="52" rx="6" fill="var(--surface)" stroke="var(--green)" stroke-width="1.4" /><text x="335" y="104" font-size="11" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Tree 2</text><text x="335" y="120" font-size="9" text-anchor="middle" fill="var(--text-muted)" font-weight="400" font-family="Inter,sans-serif">random feature subset</text><line x1="390" y1="108" x2="430" y2="110" stroke="var(--text-dim)" stroke-width="1.3"  marker-end="url(#ar9)"/><line x1="100" y1="95" x2="140" y2="178" stroke="var(--text-dim)" stroke-width="1.3"  marker-end="url(#ar9)"/><rect x="140" y="152" width="100" height="52" rx="6" fill="var(--surface)" stroke="var(--blue)" stroke-width="1.4" /><text x="190" y="174" font-size="11" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Bag 3</text><text x="190" y="190" font-size="9" text-anchor="middle" fill="var(--text-muted)" font-weight="400" font-family="Inter,sans-serif">(with replacement)</text><line x1="240" y1="178" x2="280" y2="178" stroke="var(--text-dim)" stroke-width="1.3"  marker-end="url(#ar9)"/><rect x="280" y="152" width="110" height="52" rx="6" fill="var(--surface)" stroke="var(--green)" stroke-width="1.4" /><text x="335" y="174" font-size="11" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">Tree 3</text><text x="335" y="190" font-size="9" text-anchor="middle" fill="var(--text-muted)" font-weight="400" font-family="Inter,sans-serif">random feature subset</text><line x1="390" y1="178" x2="430" y2="110" stroke="var(--text-dim)" stroke-width="1.3"  marker-end="url(#ar9)"/><rect x="430" y="85" width="110" height="50" rx="6" fill="var(--gold)" stroke="var(--border)" stroke-width="1.4" /><text x="485" y="107" font-size="11" text-anchor="middle" fill="var(--text)" font-weight="700" font-family="Inter,sans-serif">Majority vote</text><text x="485" y="122" font-size="11" text-anchor="middle" fill="var(--text)" font-weight="700" font-family="Inter,sans-serif">→ final class</text></svg><p style="font-size:12px;color:var(--text-dim);text-align:center;margin:8px 0 0;">Random forest: bagged samples → many classification trees → majority vote (crowdsourcing)</p></div></div>
+      <div class="deck-block">
+        <h3>🔁 Active Recall — LOS 3.c</h3>
+        <div class="deck-holder" id="deck-holder-c"></div>
+      </div>
+    </div>
+    <div class="view" id="view-d">
+      <div class="module-tag">Module 3.3 · Unsupervised Learning Algorithms &amp; Other Models</div>
+      <span class="los-tag">LOS 3.d</span>
+      <h1 class="section-title">Unsupervised Algorithms, Neural Nets &amp; Deep Learning</h1>
+      <p class="section-sub">PCA, k-means, hierarchical clustering, plus neural networks, deep learning networks and reinforcement learning.</p>
+      <div class="theory"><h4>1. Principal components analysis (PCA)</h4>
+<p>Too many features (high dimension) create <strong>noise</strong>. <strong>Dimension reduction</strong> discards attributes that carry little information. <strong>PCA</strong> summarizes a large number of <strong>correlated</strong> factors into a much smaller set of <strong>uncorrelated</strong> factors called <strong>eigenvectors</strong> — linear combinations of the original features (PCA1 = a<sub>1</sub>X<sub>1</sub> + b<sub>1</sub>X<sub>2</sub> + …). Each eigenvector has an <strong>eigenvalue</strong>: the proportion of total variance explained. The factor with the <strong>highest eigenvalue is the most important</strong>, then the second-highest, and so on, up to the number the researcher specifies.</p>
+<p>A <strong>scree plot</strong> shows the proportion of total variance explained by each principal component (highest to lowest; the "elbow" marks where gains flatten). In practice, retain the <strong>smallest number of components that together capture 85%–95% of total variance</strong>. Because components are linear combinations of the original data, they <strong>cannot be easily labeled or interpreted</strong> → <strong>black-box</strong>.</p>
+<h4>2. Clustering</h4>
+<p>Groups observations into categories based on <strong>similarity of attributes (cohesion)</strong> — e.g., classify stocks by past performance instead of sector. Human judgment defines "similar." A common metric is <strong>Euclidean distance</strong> (straight-line distance between two observations).</p>
+<h4>2.1 K-means clustering</h4>
+<p>Partitions observations into <strong>k nonoverlapping clusters</strong>; <strong>k is a hyperparameter set before clustering</strong>. Each cluster has a <strong>centroid</strong> (its center) and each observation is assigned by proximity to a centroid.</p>
+<div class="steps-flow"><div class="step-node">Pick k; randomly place k centroids</div><div class="step-connector">→</div><div class="step-node">Assign each point to its closest centroid</div><div class="step-connector">→</div><div class="step-node">Recompute each centroid</div><div class="step-connector">→</div><div class="step-node">Reassign points to the new nearest centroid; repeat until no reassignment</div></div>
+<p><strong>Limitation:</strong> k must be chosen up front, so you need some idea of the data's nature. <strong>Use:</strong> classify thousands of securities from patterns in high-dimensional data.</p>
+<h4>2.2 Hierarchical clustering</h4>
+<p>Builds a <strong>hierarchy of clusters without a predefined number</strong> of clusters.</p><div class="grid-2"><div class="value-card"><h5>Agglomerative (bottom-up)</h5><p>Start with each observation as its own cluster; merge the closest (most similar) clusters step by step.</p></div><div class="value-card"><h5>Divisive (top-down)</h5><p>Start with one giant cluster and partition it into smaller and smaller clusters.</p></div></div><p><strong>Investment uses:</strong> diversify by holding assets from multiple clusters; analyze portfolio risk — concentration shows as a large allocation to one cluster. Clusters are not clearly labeled, but clustering uncovers hidden structure.</p><div class="callout"><div class="callout-label">Example — ML for ESG investing</div>Governance is objectively measurable; social/environmental impact is subjective. NLP can parse corporate disclosures (text, audio, video): words like "human capital," "living wage," "D&amp;I" proxy social responsibility; "sustainable," "recycle," "green" proxy environmental intent. <strong>Supervised</strong> algorithms (logistic regression, SVM, CART, random forests, neural networks) then generate ESG scores.</div>
+<h4>Neural networks (NNs / ANNs)</h4>
+<p>Used for <strong>supervised regression and classification</strong>; nodes connected by links in three kinds of layers:</p><div class="grid-3"><div class="value-card"><h5>Input layer</h5><p>One node per feature; values are <strong>scaled</strong> so they are comparable for weighted averaging.</p></div><div class="value-card"><h5>Hidden layer(s)</h5><p>Nodes called <strong>neurons</strong>: a <strong>summation operator</strong> (weighted average) feeding a typically <strong>nonlinear activation function</strong>; output passes to the next layer.</p></div><div class="value-card"><h5>Output layer</h5><p>Typically a <strong>single node</strong> — the model's prediction.</p></div></div><p><strong>Forward propagation</strong> passes values forward through the layers; <strong>backward propagation</strong> revises the weights in the summation operators as the network learns from its errors. Multiple hidden layers with their own activation functions let NNs model <strong>complex nonlinear functions</strong>. The researcher sets the structure: e.g., 3 inputs, one hidden layer of 4 nodes, 1 output → <strong>(3, 4, 1)</strong>, the network's <strong>hyperparameters</strong>, revisable based on out-of-sample performance.</p>
+<h4>Deep learning networks (DLNs)</h4>
+<p>Neural networks with <strong>many hidden layers — at least 2, often more than 20</strong>. Used for image, pattern, speech and character recognition; the last layer gives the <strong>expected probability</strong> of belonging to each category and the observation goes to the highest. Further uses: credit card fraud detection, autonomous cars, NLP, investment decisions. One study using the six Black-Scholes inputs predicted option values with <strong>R² of 99.8%</strong>; others used standard factors (book-to-market, operating income/market cap) to beat factor models. Popularity stems from better analytics, faster computing and large machine-readable data.</p>
+<h4>Reinforcement learning (RL)</h4>
+<p>An <strong>agent</strong> seeks to <strong>maximize a defined reward</strong> under defined constraints. It uses <strong>no labeled training data</strong> and gives <strong>no instantaneous feedback</strong>; it learns from <strong>millions of trials</strong>. DeepMind's <strong>AlphaGo</strong> beat the reigning Go world champion. Its efficacy in investment decisions is <strong>not yet conclusive</strong>.</p><div class="callout"><div class="callout-label">Key Concepts — LOS 3.d</div><strong>PCA</strong> (uncorrelated eigenvectors), <strong>k-means</strong> (k nonoverlapping clusters, centroids), <strong>hierarchical</strong> (no predefined clusters). NNs = input, hidden (neurons: summation + activation), output. DLNs = multiple hidden layers (image/speech/pattern recognition). RL = learn from own errors to maximize reward.</div><h4>Figures — PCA, k-means, hierarchical clustering, neural network</h4><div class="growth-chart"><svg viewBox="0 0 640 200" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ar10" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--text-dim)"/></marker></defs><line x1="50" y1="15" x2="50" y2="170" stroke="var(--text-dim)" stroke-width="1.4"  /><line x1="50" y1="170" x2="400" y2="170" stroke="var(--text-dim)" stroke-width="1.4"  /><rect x="67" y="94.60000000000001" width="36" height="75.39999999999999" fill="var(--blue)"/><text x="85" y="187" font-size="10" text-anchor="middle" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">PC1 (52%)</text><text x="85" y="86.60000000000001" font-size="10" text-anchor="middle" fill="var(--rust-soft)" font-weight="700" font-family="Inter,sans-serif">52%</text><rect x="129" y="135.2" width="36" height="34.8" fill="var(--blue)"/><text x="147" y="187" font-size="10" text-anchor="middle" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">PC2 (24%)</text><text x="147" y="51.8" font-size="10" text-anchor="middle" fill="var(--rust-soft)" font-weight="700" font-family="Inter,sans-serif">76%</text><rect x="191" y="152.6" width="36" height="17.4" fill="var(--blue)"/><text x="209" y="187" font-size="10" text-anchor="middle" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">PC3 (12%)</text><text x="209" y="34.400000000000006" font-size="10" text-anchor="middle" fill="var(--rust-soft)" font-weight="700" font-family="Inter,sans-serif">88%</text><rect x="253" y="159.85" width="36" height="10.15" fill="var(--blue)"/><text x="271" y="187" font-size="10" text-anchor="middle" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">PC4 (7%)</text><text x="271" y="24.25" font-size="10" text-anchor="middle" fill="var(--rust-soft)" font-weight="700" font-family="Inter,sans-serif">95%</text><rect x="315" y="162.75" width="36" height="7.25" fill="var(--blue)"/><text x="333" y="187" font-size="10" text-anchor="middle" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">PC5 (5%)</text><text x="333" y="17.0" font-size="10" text-anchor="middle" fill="var(--rust-soft)" font-weight="700" font-family="Inter,sans-serif">100%</text><path d="M85.0,94.6 L147.0,59.8 L209.0,42.4 L271.0,32.2 L333.0,25.0" fill="none" stroke="var(--rust)" stroke-width="2.2" /><circle cx="85" cy="94.60000000000001" r="3.6" fill="var(--rust)"/><circle cx="147" cy="59.8" r="3.6" fill="var(--rust)"/><circle cx="209" cy="42.400000000000006" r="3.6" fill="var(--rust)"/><circle cx="271" cy="32.25" r="3.6" fill="var(--rust)"/><circle cx="333" cy="25.0" r="3.6" fill="var(--rust)"/><line x1="50" y1="46.75" x2="400" y2="46.75" stroke="var(--gold)" stroke-width="1.4" stroke-dasharray="5 3" /><text x="404" y="50.75" font-size="10.5" text-anchor="start" fill="var(--gold-soft)" font-weight="700" font-family="Inter,sans-serif">85%</text><circle cx="209" cy="42.400000000000006" r="10" fill="none" stroke="var(--green)" stroke-width="2"/><text x="465" y="70" font-size="11" text-anchor="start" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">Retain the smallest number of</text><text x="465" y="86" font-size="11" text-anchor="start" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">components capturing 85%–95%</text><text x="465" y="106" font-size="11" text-anchor="start" fill="var(--green-soft)" font-weight="700" font-family="Inter,sans-serif">→ 3 components (88%)</text><text transform="rotate(-90 26 95)" x="26" y="95" font-size="9.5" text-anchor="middle" fill="var(--text-dim)" font-weight="400" font-family="Inter,sans-serif">Variance explained</text></svg><div class="growth-legend"><span><i class="legend-dot" style="background:var(--blue)"></i>Variance explained by PC</span><span><i class="legend-dot" style="background:var(--rust)"></i>Cumulative</span></div><p style="font-size:12px;color:var(--text-dim);text-align:center;margin:8px 0 0;">Scree plot (illustrative eigenvalue proportions, same as Practice Problem 3): bars = each PC, line = cumulative</p></div><div class="growth-chart"><svg viewBox="0 0 520 190" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ar11" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--text-dim)"/></marker></defs><rect x="8" y="28" width="160" height="150" rx="4" fill="var(--surface)" stroke="var(--border)" stroke-width="1.4" /><text x="88" y="18" font-size="10" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">1. Pick k = 2</text><circle cx="71.59679216364691" cy="92.05203911646963" r="3.6" fill="var(--text-dim)"/><circle cx="71.99292100838471" cy="81.05958998299522" r="3.6" fill="var(--text-dim)"/><circle cx="62.63075806870719" cy="82.41308409929799" r="3.6" fill="var(--text-dim)"/><circle cx="89.78850116711807" cy="90.89115089887494" r="3.6" fill="var(--text-dim)"/><circle cx="88.79049174923257" cy="88.5604062779457" r="3.6" fill="var(--text-dim)"/><circle cx="80.25043614036298" cy="87.7148445836977" r="3.6" fill="var(--text-dim)"/><circle cx="52.84136841335115" cy="96.624837884571" r="3.6" fill="var(--text-dim)"/><circle cx="81.73491845039979" cy="91.88427990755386" r="3.6" fill="var(--text-dim)"/><circle cx="52.50485146041598" cy="62.05628804023448" r="3.6" fill="var(--text-dim)"/><circle cx="124.91811591406783" cy="131.27308263274796" r="3.6" fill="var(--text-dim)"/><circle cx="140.81243169137144" cy="136.8893739841826" r="3.6" fill="var(--text-dim)"/><circle cx="143.678966148998" cy="128.95827782666925" r="3.6" fill="var(--text-dim)"/><circle cx="140.8557518845047" cy="142.7422545422275" r="3.6" fill="var(--text-dim)"/><circle cx="127.95687327782251" cy="160.34315322053874" r="3.6" fill="var(--text-dim)"/><circle cx="144.15290443303715" cy="153.4201696651208" r="3.6" fill="var(--text-dim)"/><circle cx="128.49957223737817" cy="127.66443858021051" r="3.6" fill="var(--text-dim)"/><circle cx="132.17417916712986" cy="136.08459629053738" r="3.6" fill="var(--text-dim)"/><circle cx="145.15664730892757" cy="140.80408247247692" r="3.6" fill="var(--text-dim)"/><rect x="46.25" y="142.0" width="10" height="10" fill="var(--blue)" stroke="var(--text)" stroke-width="1.4"/><rect x="136.5" y="66.0" width="10" height="10" fill="var(--gold)" stroke="var(--text)" stroke-width="1.4"/><rect x="180" y="28" width="160" height="150" rx="4" fill="var(--surface)" stroke="var(--border)" stroke-width="1.4" /><text x="260" y="18" font-size="10" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">2. Assign points to the closest centroid</text><circle cx="243.5967921636469" cy="92.05203911646963" r="3.6" fill="var(--blue)"/><circle cx="243.9929210083847" cy="81.05958998299522" r="3.6" fill="var(--blue)"/><circle cx="234.6307580687072" cy="82.41308409929799" r="3.6" fill="var(--blue)"/><circle cx="261.78850116711806" cy="90.89115089887494" r="3.6" fill="var(--gold)"/><circle cx="260.79049174923256" cy="88.5604062779457" r="3.6" fill="var(--gold)"/><circle cx="252.25043614036298" cy="87.7148445836977" r="3.6" fill="var(--gold)"/><circle cx="224.84136841335115" cy="96.624837884571" r="3.6" fill="var(--blue)"/><circle cx="253.7349184503998" cy="91.88427990755386" r="3.6" fill="var(--blue)"/><circle cx="224.50485146041598" cy="62.05628804023448" r="3.6" fill="var(--blue)"/><circle cx="296.9181159140678" cy="131.27308263274796" r="3.6" fill="var(--gold)"/><circle cx="312.81243169137144" cy="136.8893739841826" r="3.6" fill="var(--gold)"/><circle cx="315.67896614899803" cy="128.95827782666925" r="3.6" fill="var(--gold)"/><circle cx="312.8557518845047" cy="142.7422545422275" r="3.6" fill="var(--gold)"/><circle cx="299.9568732778225" cy="160.34315322053874" r="3.6" fill="var(--blue)"/><circle cx="316.1529044330372" cy="153.4201696651208" r="3.6" fill="var(--gold)"/><circle cx="300.4995722373782" cy="127.66443858021051" r="3.6" fill="var(--gold)"/><circle cx="304.17417916712986" cy="136.08459629053738" r="3.6" fill="var(--gold)"/><circle cx="317.1566473089276" cy="140.80408247247692" r="3.6" fill="var(--gold)"/><rect x="218.25" y="142.0" width="10" height="10" fill="var(--blue)" stroke="var(--text)" stroke-width="1.4"/><rect x="308.5" y="66.0" width="10" height="10" fill="var(--gold)" stroke="var(--text)" stroke-width="1.4"/><rect x="352" y="28" width="160" height="150" rx="4" fill="var(--surface)" stroke="var(--border)" stroke-width="1.4" /><text x="432" y="18" font-size="10" text-anchor="middle" fill="var(--text)" font-weight="600" font-family="Inter,sans-serif">3. Recompute centroids</text><circle cx="415.5967921636469" cy="92.05203911646963" r="3.6" fill="var(--blue)"/><circle cx="415.9929210083847" cy="81.05958998299522" r="3.6" fill="var(--blue)"/><circle cx="406.63075806870717" cy="82.41308409929799" r="3.6" fill="var(--blue)"/><circle cx="433.78850116711806" cy="90.89115089887494" r="3.6" fill="var(--blue)"/><circle cx="432.79049174923256" cy="88.5604062779457" r="3.6" fill="var(--blue)"/><circle cx="424.250436140363" cy="87.7148445836977" r="3.6" fill="var(--blue)"/><circle cx="396.8413684133511" cy="96.624837884571" r="3.6" fill="var(--blue)"/><circle cx="425.7349184503998" cy="91.88427990755386" r="3.6" fill="var(--blue)"/><circle cx="396.504851460416" cy="62.05628804023448" r="3.6" fill="var(--blue)"/><circle cx="468.9181159140678" cy="131.27308263274796" r="3.6" fill="var(--gold)"/><circle cx="484.81243169137144" cy="136.8893739841826" r="3.6" fill="var(--gold)"/><circle cx="487.67896614899803" cy="128.95827782666925" r="3.6" fill="var(--gold)"/><circle cx="484.8557518845047" cy="142.7422545422275" r="3.6" fill="var(--gold)"/><circle cx="471.9568732778225" cy="160.34315322053874" r="3.6" fill="var(--gold)"/><circle cx="488.1529044330372" cy="153.4201696651208" r="3.6" fill="var(--gold)"/><circle cx="472.4995722373782" cy="127.66443858021051" r="3.6" fill="var(--gold)"/><circle cx="476.17417916712986" cy="136.08459629053738" r="3.6" fill="var(--gold)"/><circle cx="489.1566473089276" cy="140.80408247247692" r="3.6" fill="var(--gold)"/><rect x="411.459004291291" y="80.91739119907118" width="10" height="10" fill="var(--blue)" stroke="var(--text)" stroke-width="1.4"/><rect x="475.4672713403597" y="134.7977143571902" width="10" height="10" fill="var(--gold)" stroke="var(--text)" stroke-width="1.4"/></svg><p style="font-size:12px;color:var(--text-dim);text-align:center;margin:8px 0 0;">K-means clustering steps (slide, redrawn): squares = centroids, dots = observations</p></div><div class="growth-chart"><svg viewBox="0 0 640 180" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ar12" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--text-dim)"/></marker></defs><line x1="50" y1="150" x2="50" y2="154" stroke="var(--text-dim)" stroke-width="1.4"  /><text x="50" y="168" font-size="12" text-anchor="middle" fill="var(--text)" font-weight="700" font-family="Inter,sans-serif">U</text><line x1="110" y1="150" x2="110" y2="154" stroke="var(--text-dim)" stroke-width="1.4"  /><text x="110" y="168" font-size="12" text-anchor="middle" fill="var(--text)" font-weight="700" font-family="Inter,sans-serif">W</text><line x1="190" y1="150" x2="190" y2="154" stroke="var(--text-dim)" stroke-width="1.4"  /><text x="190" y="168" font-size="12" text-anchor="middle" fill="var(--text)" font-weight="700" font-family="Inter,sans-serif">X</text><line x1="270" y1="150" x2="270" y2="154" stroke="var(--text-dim)" stroke-width="1.4"  /><text x="270" y="168" font-size="12" text-anchor="middle" fill="var(--text)" font-weight="700" font-family="Inter,sans-serif">Y</text><line x1="330" y1="150" x2="330" y2="154" stroke="var(--text-dim)" stroke-width="1.4"  /><text x="330" y="168" font-size="12" text-anchor="middle" fill="var(--text)" font-weight="700" font-family="Inter,sans-serif">Z</text><path d="M50.0,150.0 L50.0,124.0 L110.0,124.0 L110.0,150.0" fill="none" stroke="var(--blue)" stroke-width="2" /><path d="M270.0,150.0 L270.0,98.0 L330.0,98.0 L330.0,150.0" fill="none" stroke="var(--blue)" stroke-width="2" /><path d="M190.0,150.0 L190.0,72.0 L300.0,72.0 L300.0,98.0" fill="none" stroke="var(--blue)" stroke-width="2" /><path d="M80.0,124.0 L80.0,46.0 L245.0,46.0 L245.0,72.0" fill="none" stroke="var(--blue)" stroke-width="2" /><text x="80" y="119" font-size="10" text-anchor="middle" fill="var(--blue-soft)" font-weight="600" font-family="Inter,sans-serif">UW</text><text x="300" y="93" font-size="10" text-anchor="middle" fill="var(--blue-soft)" font-weight="600" font-family="Inter,sans-serif">YZ</text><text x="245" y="67" font-size="10" text-anchor="middle" fill="var(--blue-soft)" font-weight="600" font-family="Inter,sans-serif">XYZ</text><text x="162" y="41" font-size="10" text-anchor="middle" fill="var(--blue-soft)" font-weight="600" font-family="Inter,sans-serif">UWXYZ</text><line x1="420" y1="135" x2="420" y2="45" stroke="var(--rust)" stroke-width="2.2"  marker-end="url(#ar12)"/><text x="430" y="60" font-size="11" text-anchor="start" fill="var(--rust-soft)" font-weight="700" font-family="Inter,sans-serif">Agglomerative</text><text x="430" y="75" font-size="10" text-anchor="start" fill="var(--text-muted)" font-weight="400" font-family="Inter,sans-serif">(bottom-up: merge closest)</text><line x1="420" y1="150" x2="420" y2="150" stroke="var(--text-dim)" stroke-width="1.4"  /><text x="430" y="112" font-size="11" text-anchor="start" fill="var(--green-soft)" font-weight="700" font-family="Inter,sans-serif">Divisive</text><text x="430" y="127" font-size="10" text-anchor="start" fill="var(--text-muted)" font-weight="400" font-family="Inter,sans-serif">(top-down: split one big cluster)</text></svg><p style="font-size:12px;color:var(--text-dim);text-align:center;margin:8px 0 0;">Hierarchical clustering dendrogram (slide example U, W, X, Y, Z): steps 1–4 merge UW, YZ, XYZ, then UWXYZ</p></div><div class="growth-chart"><svg viewBox="0 0 640 252" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ar13" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--text-dim)"/></marker></defs><line x1="60" y1="60" x2="200" y2="40" stroke="var(--border)" stroke-width="1.2"  /><line x1="60" y1="60" x2="200" y2="85" stroke="var(--border)" stroke-width="1.2"  /><line x1="60" y1="60" x2="200" y2="130" stroke="var(--border)" stroke-width="1.2"  /><line x1="60" y1="60" x2="200" y2="175" stroke="var(--border)" stroke-width="1.2"  /><line x1="60" y1="105" x2="200" y2="40" stroke="var(--border)" stroke-width="1.2"  /><line x1="60" y1="105" x2="200" y2="85" stroke="var(--border)" stroke-width="1.2"  /><line x1="60" y1="105" x2="200" y2="130" stroke="var(--border)" stroke-width="1.2"  /><line x1="60" y1="105" x2="200" y2="175" stroke="var(--border)" stroke-width="1.2"  /><line x1="60" y1="150" x2="200" y2="40" stroke="var(--border)" stroke-width="1.2"  /><line x1="60" y1="150" x2="200" y2="85" stroke="var(--border)" stroke-width="1.2"  /><line x1="60" y1="150" x2="200" y2="130" stroke="var(--border)" stroke-width="1.2"  /><line x1="60" y1="150" x2="200" y2="175" stroke="var(--border)" stroke-width="1.2"  /><line x1="200" y1="40" x2="340" y2="107" stroke="var(--border)" stroke-width="1.2"  /><line x1="200" y1="85" x2="340" y2="107" stroke="var(--border)" stroke-width="1.2"  /><line x1="200" y1="130" x2="340" y2="107" stroke="var(--border)" stroke-width="1.2"  /><line x1="200" y1="175" x2="340" y2="107" stroke="var(--border)" stroke-width="1.2"  /><circle cx="60" cy="60" r="12" fill="var(--blue)"/><circle cx="60" cy="105" r="12" fill="var(--blue)"/><circle cx="60" cy="150" r="12" fill="var(--blue)"/><circle cx="200" cy="40" r="12" fill="var(--green)"/><circle cx="200" cy="85" r="12" fill="var(--green)"/><circle cx="200" cy="130" r="12" fill="var(--green)"/><circle cx="200" cy="175" r="12" fill="var(--green)"/><circle cx="340" cy="107" r="12" fill="var(--gold)"/><text x="60" y="228" font-size="11" text-anchor="middle" fill="var(--text)" font-weight="700" font-family="Inter,sans-serif">Input layer</text><text x="60" y="243" font-size="10" text-anchor="middle" fill="var(--text-muted)" font-weight="400" font-family="Inter,sans-serif">3 features (scaled)</text><text x="200" y="228" font-size="11" text-anchor="middle" fill="var(--text)" font-weight="700" font-family="Inter,sans-serif">Hidden layer</text><text x="200" y="243" font-size="10" text-anchor="middle" fill="var(--text-muted)" font-weight="400" font-family="Inter,sans-serif">4 neurons</text><text x="340" y="228" font-size="11" text-anchor="middle" fill="var(--text)" font-weight="700" font-family="Inter,sans-serif">Output layer</text><text x="340" y="243" font-size="10" text-anchor="middle" fill="var(--text-muted)" font-weight="400" font-family="Inter,sans-serif">prediction</text><rect x="400" y="55" width="230" height="105" rx="6" fill="var(--surface)" stroke="var(--green)" stroke-width="1.4" /><text x="515" y="76" font-size="11.5" text-anchor="middle" fill="var(--text)" font-weight="700" font-family="Inter,sans-serif">Each neuron</text><text x="515" y="98" font-size="10.5" text-anchor="middle" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">1) Summation operator =</text><text x="515" y="112" font-size="10.5" text-anchor="middle" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">weighted average of inputs</text><text x="515" y="132" font-size="10.5" text-anchor="middle" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">2) Activation function</text><text x="515" y="146" font-size="10.5" text-anchor="middle" fill="var(--text)" font-weight="400" font-family="Inter,sans-serif">(typically nonlinear) → output</text><line x1="75" y1="20" x2="330" y2="20" stroke="var(--text-dim)" stroke-width="1.6"  marker-end="url(#ar13)"/><text x="200" y="14" font-size="10.5" text-anchor="middle" fill="var(--text-muted)" font-weight="600" font-family="Inter,sans-serif">Forward propagation →</text><line x1="330" y1="198" x2="75" y2="198" stroke="var(--rust)" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#ar13)"/><text x="200" y="212" font-size="10" text-anchor="middle" fill="var(--rust-soft)" font-weight="600" font-family="Inter,sans-serif">Backward propagation (revise weights)</text></svg><p style="font-size:12px;color:var(--text-dim);text-align:center;margin:8px 0 0;">Neural network with structure (3, 4, 1); backward propagation revises the weights as the network learns from errors</p></div></div>
+      <div class="deck-block">
+        <h3>🔁 Active Recall — LOS 3.d</h3>
+        <div class="deck-holder" id="deck-holder-d"></div>
+      </div>
+    </div>
+    <div class="view" id="view-review">
+      <span class="los-tag">🔁 Spaced Review</span>
+      <h1 class="section-title">Spaced Repetition Review</h1>
+      <p class="section-sub">Cards due for review today, pulled from every LOS in this reading, using a 5-box Leitner scheduler.</p>
+      <div class="deck-holder" id="review-deck"></div>
+    </div>
+
+    <div class="view" id="view-quiz">
+      <span class="los-tag">📝 Quiz</span>
+      <h1 class="section-title">Comprehensive Quiz</h1>
+      <p class="section-sub">Questions adapted from CFA Institute / Schweser Module Quizzes 3.1–3.3 plus supplemental questions. Answer choices are reshuffled on every attempt.</p>
+      <div id="quiz-area"></div>
+    </div>
+
+    <div class="view" id="view-practice">
+      <span class="los-tag">🧮 Practice Problems</span>
+      <h1 class="section-title">Practice Problems</h1>
+      <p class="section-sub">Full worked calculations, step by step. Try to solve each one yourself before revealing the next step.</p>
+      <div id="practice-area"></div>
+    </div>
+
+  </main>
+</div>
+<script type="module">
+// ---------------------------------------------------------------------------
+// FIREBASE — dynamic import wrapped in try/catch (pattern introduced in
+// Reading 20) so a blocked/unavailable CDN never prevents the rest of the
+// app (flashcards, quiz, practice) from rendering. Falls back to
+// localStorage-only mode automatically.
+// ---------------------------------------------------------------------------
+let fbDatabase = null, fbRef = null, fbGet = null, fbSet = null, firebaseAvailable = false;
+
+async function initFirebase(){
+  try{
+    const appMod = await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js");
+    const dbMod  = await import("https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js");
+    const firebaseApp = appMod.initializeApp({ databaseURL: "https://alter4-f781c-default-rtdb.asia-southeast1.firebasedatabase.app/" });
+    fbDatabase = dbMod.getDatabase(firebaseApp);
+    fbRef = dbMod.ref; fbGet = dbMod.get; fbSet = dbMod.set;
+    firebaseAvailable = true;
+  }catch(e){
+    console.warn("Firebase SDK unavailable — falling back to localStorage only.", e);
+    firebaseAvailable = false;
+  }
+}
+// Fixed, device-agnostic path — NEVER derive this from a per-device/localStorage ID.
+const FIREBASE_STATE_PATH = "cfa/reading3_machine_learning/progress";
+function firebaseStateRef(){ return fbRef(fbDatabase, FIREBASE_STATE_PATH); }
+const LOCAL_CACHE_KEY = "quant3-cfa-reading3-state";
+
+const LOS_ORDER = ['a', 'b', 'c', 'd'];
+const VIEW_SEQUENCE = ['overview', 'a', 'b', 'c', 'd', 'review', 'quiz', 'practice'];
+const FLASHCARD_VIEWS = ['a', 'b', 'c', 'd', 'review'];
+
+let state = { cardProgress:{}, quizHistory:[], practiceDone:{} };
+const BOX_INTERVAL_DAYS = [0,0,1,3,7,14];
+
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function isDue(cardId){
+  const p = state.cardProgress[cardId];
+  if(!p) return true;
+  return p.due <= todayStr();
+}
+function boxOf(cardId){ return (state.cardProgress[cardId] && state.cardProgress[cardId].box) || 0; }
+function gradeCard(cardId, grade){
+  let p = state.cardProgress[cardId] || {box:0, due: todayStr()};
+  if(grade==='forgot') p.box = 1;
+  else if(grade==='good') p.box = Math.min(5, (p.box||0)+1);
+  else if(grade==='easy') p.box = Math.min(5, (p.box||0)+2);
+  const days = BOX_INTERVAL_DAYS[p.box] ?? 0;
+  const d = new Date(); d.setDate(d.getDate()+days);
+  p.due = d.toISOString().slice(0,10);
+  state.cardProgress[cardId] = p;
+  saveState();
+  updateNavDots();
+}
+function masteryPercent(){
+  if(!ALL_CARDS.length) return 0;
+  let n=0; ALL_CARDS.forEach(c=>{ if(boxOf(c.id)>=4) n++; });
+  return Math.round(n/ALL_CARDS.length*100);
+}
+function dueCount(){ return ALL_CARDS.filter(c=>isDue(c.id)).length; }
+function sectionMasteryState(sectionId){
+  const cards = FLASHCARDS[sectionId];
+  if(!cards || !cards.length) return 'none';
+  const started = cards.some(c=>boxOf(c.id)>0);
+  const mastered = cards.every(c=>boxOf(c.id)>=4);
+  if(mastered) return 'mastered';
+  if(started) return 'started';
+  return 'none';
+}
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+
+// ---------------------------------------------------------------------------
+// ROUTING
+// ---------------------------------------------------------------------------
+function navigateTo(view){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  const target = document.getElementById('view-'+view);
+  if(!target) return;
+  target.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.nav-item[data-view="'+view+'"]').forEach(b=>b.classList.add('active'));
+  document.querySelector('.main').scrollTo({top:0, behavior:'instant'});
+  if(document.activeElement && document.activeElement.tagName === 'BUTTON') document.activeElement.blur();
+  if(view==='review') renderReview();
+  if(view==='quiz') renderQuizSetup();
+  if(view==='practice') renderPractice();
+}
+function goToNextModule(){
+  const activeViewEl = document.querySelector('.view.active');
+  if(!activeViewEl) return;
+  const cur = activeViewEl.id.replace('view-','');
+  const idx = VIEW_SEQUENCE.indexOf(cur);
+  if(idx >= 0 && idx < VIEW_SEQUENCE.length-1){
+    navigateTo(VIEW_SEQUENCE[idx+1]);
+  }
+}
+document.querySelectorAll('.nav-item[data-view]').forEach(btn=>{
+  btn.addEventListener('click', ()=> navigateTo(btn.getAttribute('data-view')) );
+});
+
+// ---------------------------------------------------------------------------
+// FLASHCARD BROWSER — reused for per-LOS decks AND the spaced-review deck.
+// Uses class-based selectors scoped via container.querySelector (NEVER
+// document.getElementById) because many decks exist in the DOM at once.
+// ---------------------------------------------------------------------------
+function renderFlashcardBrowser(containerId, cardsList, opts){
+  opts = opts || {};
+  const container = document.getElementById(containerId);
+  if(!container) return;
+  if(!cardsList.length){
+    container.innerHTML = `<div class="empty-state"><div class="big">🎉</div>No cards due for review right now.</div>`;
+    return;
+  }
+  let idx = 0;
+  let flipped = false;
+
+  function draw(){
+    const c = cardsList[idx];
+    flipped = false;
+    container.innerHTML = `
+      <div class="deck-head">
+        <div class="deck-progress">Card ${idx+1} / ${cardsList.length}${opts.showBox ? ' · box: '+boxOf(c.id) : ''}</div>
+        <div class="btn-row" style="margin-top:0;">
+          <button class="btn btn-ghost fc-prev">← Prev</button>
+          <button class="btn btn-ghost fc-next">Next →</button>
+        </div>
+      </div>
+      <div class="flip-hint">Click the card (or press Space) to flip</div>
+      <div class="flashcard fc-card">
+        <div class="flashcard-inner">
+          <div class="flashcard-face face-front"><span class="eyebrow">${c.id.toUpperCase()} · QUESTION</span><div class="txt">${c.q}</div></div>
+          <div class="flashcard-face face-back"><div class="txt">${c.a}</div></div>
+        </div>
+      </div>
+      <div class="grade-row fc-grades" style="visibility:hidden;">
+        <button class="btn btn-rust" data-g="forgot">😵 Didn't know</button>
+        <button class="btn btn-ghost" data-g="good">🙂 Got it</button>
+        <button class="btn btn-green" data-g="easy">😎 Easy</button>
+      </div>
+      <div class="kbd-hint-row">
+        <span><span class="kbd">←</span> Prev card</span>
+        <span><span class="kbd">→</span> Next card</span>
+        <span><span class="kbd">Space</span> Flip</span>
+        <span><span class="kbd">Enter</span> Next module</span>
+      </div>
+    `;
+    container.querySelector('.fc-card').addEventListener('click', ()=>{
+      flipped = !flipped;
+      container.querySelector('.fc-card').classList.toggle('flipped', flipped);
+      container.querySelector('.fc-grades').style.visibility = flipped ? 'visible' : 'hidden';
+    });
+    container.querySelector('.fc-prev').addEventListener('click', ()=>{ idx = (idx-1+cardsList.length)%cardsList.length; draw(); });
+    container.querySelector('.fc-next').addEventListener('click', ()=>{ idx = (idx+1)%cardsList.length; draw(); });
+    container.querySelectorAll('.fc-grades [data-g]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        gradeCard(c.id, btn.getAttribute('data-g'));
+        if(idx < cardsList.length-1){ idx++; draw(); }
+        else{
+          container.innerHTML = `<div class="empty-state"><div class="big">🎉</div>You've finished this deck!<div class="btn-row" style="justify-content:center;"><button class="btn btn-primary fc-restart">Restart Deck</button></div></div>`;
+          container.querySelector('.fc-restart').addEventListener('click', ()=>{ idx=0; draw(); });
+        }
+      });
+    });
+  }
+  draw();
+}
+
+function initSectionDecks(){
+  LOS_ORDER.forEach(sec=>{
+    renderFlashcardBrowser('deck-holder-'+sec, FLASHCARDS[sec], {showBox:true});
+  });
+}
+
+function renderReview(){
+  const due = shuffle(ALL_CARDS.filter(c=>isDue(c.id)));
+  const container = document.getElementById('review-deck');
+  if(!due.length){
+    container.innerHTML = `<div class="empty-state"><div class="big">🎉</div>No cards due for review right now.<div class="btn-row" style="justify-content:center;"><button class="btn btn-primary" id="review-all-btn">Review All ${ALL_CARDS.length} Cards Now</button></div></div>`;
+    document.getElementById('review-all-btn').addEventListener('click', ()=>{
+      renderFlashcardBrowser('review-deck', shuffle(ALL_CARDS), {showBox:true});
+    });
+    return;
+  }
+  renderFlashcardBrowser('review-deck', due, {showBox:true});
+}
+
+// ---------------------------------------------------------------------------
+// FLASHCARD DATA — one array per LOS letter. id = {los}{n}, unique globally.
+// ---------------------------------------------------------------------------
+const FLASHCARDS = {
+  a: [
+    {id:'a1', q:`Define machine learning (ML) and say when it beats standard statistical methods.`, a:`<b>ML = using algorithms to make decisions by generalizing (finding patterns) in a data set</b> — "find the pattern, apply the pattern." It needs <b>no distributional assumptions</b> and performs better with <b>many variables (high dimension)</b> and <b>nonlinear</b> relationships.`},
+    {id:'a2', q:`In ML terminology, what is a <b>target variable</b> and what types can it be?`, a:`The <b>dependent variable (y)</b>. It can be <b>continuous, categorical, or ordinal</b>.`},
+    {id:'a3', q:`In ML terminology, what are <b>features</b> and the <b>training dataset</b>?`, a:`<b>Features</b> = independent variables (x). <b>Training dataset</b> = the sample used to fit the model.`},
+    {id:'a4', q:`What is a <b>hyperparameter</b>? Give two examples.`, a:`A model input <b>specified by the researcher</b> (not learned from data). Examples: <b>k</b> in KNN and k-means, <b>λ</b> in LASSO, the (3, 4, 1) structure of a neural network.`},
+    {id:'a5', q:`Define supervised learning and give the earnings-manipulator example.`, a:`Uses <b>labeled training data</b> (target variable defined). Example: supply many attributes for known manipulators and non-manipulators; the program learns patterns that flag manipulators in new data. <b>Multiple regression is a supervised method.</b>`},
+    {id:'a6', q:`A supervised model has a <b>continuous</b> target. Is it regression or classification? What if the target is <b>categorical or ordinal</b>?`, a:`Continuous target → <b>regression</b> (e.g., house-price prediction). Categorical or ordinal (e.g., a ranking) → <b>classification</b> (binary: default vs. not; multicategory: bond ratings class).`},
+    {id:'a7', q:`Define unsupervised learning and name its standard example.`, a:`The program gets <b>features without labeled training data and without a target variable</b>; it seeks <b>structure/interrelationships</b> in the data. Standard example: <b>clustering</b>.`},
+    {id:'a8', q:`What are deep learning algorithms and what are they based on?`, a:`Algorithms for complex tasks such as <b>image recognition and natural language processing</b>, based on <b>neural networks</b> (ML algorithms for problems with significant nonlinearities).`},
+    {id:'a9', q:`What is reinforcement learning?`, a:`Programs that <b>learn from their own output and prediction errors</b>; an agent maximizes a reward. Slide analogy: dog = agent, environment = where you play, action = fetching, reward = the treat (could be nonexistent or negative if the ball is not fetched).`},
+    {id:'a10', q:`Which ML algorithms are <b>supervised</b> for a <b>continuous</b> target, and which are <b>unsupervised</b> for continuous or categorical features (Figure 3.1)?`, a:`Supervised regression: <b>linear/penalized regression (LASSO), logistic, CART, random forest</b>. Unsupervised: <b>dimension reduction (PCA)</b> and <b>clustering (k-means, hierarchical)</b>.`},
+    {id:'a11', q:`Which ML algorithms are <b>supervised classification</b> methods (Figure 3.1)?`, a:`<b>Logistic, support vector machine (SVM), K-nearest neighbor (KNN), classification and regression tree (CART)</b>.`},
+    {id:'a12', q:`Which algorithms apply to <b>either</b> variable type and to <b>both</b> supervised and unsupervised settings (Figure 3.1)?`, a:`<b>Neural networks, deep learning, and reinforcement learning.</b>`},
+    {id:'a13', q:`Algorithm choice, Step 1: the data set has too many features. What do you do?`, a:`Apply a <b>dimension reduction algorithm (PCA)</b> before proceeding to step 2.`},
+    {id:'a14', q:`Algorithm choice, Step 2: the task is a <b>numerical prediction</b> (not classification). Which algorithms for linear vs. nonlinear/complex data?`, a:`<b>Linear data → penalized regression.</b> <b>Nonlinear and complex data → CART, random forests, or neural networks.</b>`},
+    {id:'a15', q:`Algorithm choice, Step 3: <b>supervised classification</b>. Which algorithms for linear vs. complex nonlinear data?`, a:`<b>Linear data → KNN or SVM.</b> <b>Complex nonlinear data → CART, random forests, or neural networks.</b>`},
+    {id:'a16', q:`Algorithm choice, Step 4: <b>unsupervised</b> problem. Which algorithm for linear data when the number of categories is <b>known</b> vs. <b>unknown</b>, and for complex nonlinear data?`, a:`Linear: <b>k-means</b> if the number of categories is known; <b>hierarchical clustering</b> if unknown. Complex nonlinear: <b>neural networks</b>.`},
+  ],
+  b: [
+    {id:'b1', q:`Define overfitting. What does it do to in-sample and out-of-sample results?`, a:`Too many features let the model treat <b>noise as pattern</b>, giving a <b>high in-sample R²</b> but <b>low out-of-sample R²</b>; the model does <b>not generalize</b> to new data. It is an issue with <b>supervised</b> ML.`},
+    {id:'b2', q:`What does it mean for a model to <b>generalize well</b>?`, a:`It <b>retains its explanatory power when applied to new (out-of-sample) data</b>.`},
+    {id:'b3', q:`Name the three nonoverlapping data sets and the purpose of each.`, a:`<b>Training sample</b> — develop (fit) the model. <b>Validation sample</b> — tune the model. <b>Test sample</b> — evaluate the model on new data.`},
+    {id:'b4', q:`Which samples produce in-sample error and which produces out-of-sample error?`, a:`Training and validation samples → <b>in-sample</b> errors. Test sample → <b>out-of-sample</b> error.`},
+    {id:'b5', q:`Define <b>bias error</b>.`, a:`The <b>in-sample</b> error resulting from a model with a <b>poor fit</b> (underfitting). A model with poor in-sample explanatory power has high bias error.`},
+    {id:'b6', q:`Define <b>variance error</b>.`, a:`The <b>out-of-sample</b> error resulting from an <b>overfit</b> model that does not generalize well.`},
+    {id:'b7', q:`Define <b>base error</b>.`, a:`Residual error due to <b>random noise</b>.`},
+    {id:'b8', q:`Write the decomposition of out-of-sample error.`, a:`<b>Out-of-sample error = bias error + variance error + base error.</b>`},
+    {id:'b9', q:`What does a <b>learning curve</b> plot?`, a:`The <b>accuracy rate (1 − error rate)</b> in the validation or test sample versus the <b>size of the training sample</b>.`},
+    {id:'b10', q:`A learning curve shows in-sample accuracy converging <b>far below</b> the desired accuracy level, with out-of-sample accuracy converging to the same low level. Diagnosis?`, a:`<b>High bias error</b> (underfit; too simple).`},
+    {id:'b11', q:`A learning curve shows in-sample accuracy converging toward the desired level while out-of-sample accuracy <b>lags far behind</b>. Diagnosis?`, a:`<b>High variance error</b> (overfit; does not generalize).`},
+    {id:'b12', q:`What does the learning curve of a <b>robust, well-generalizing</b> model look like?`, a:`Accuracy improves as sample size grows, and in-sample and out-of-sample accuracy <b>converge toward the desired accuracy level</b>.`},
+    {id:'b13', q:`How do bias and variance error change as model complexity rises? Which model types tend toward each?`, a:`<b>Variance error increases</b> with complexity; <b>bias error decreases</b>. <b>Linear</b> models tend to have high <b>bias</b> error; <b>nonlinear</b> models tend to have high <b>variance</b> error. The optimal complexity minimizes <b>total error</b>.`},
+    {id:'b14', q:`Name the two methods data scientists use to reduce overfitting.`, a:`<b>Complexity reduction</b> and <b>cross validation</b>.`},
+    {id:'b15', q:`Explain complexity reduction.`, a:`A <b>penalty is imposed to exclude features</b> that do not meaningfully contribute to out-of-sample prediction accuracy; the penalty <b>increases with the number of features</b> used.`},
+    {id:'b16', q:`Explain k-fold cross validation.`, a:`Randomly divide the sample <b>equally into k parts</b>; train on <b>(k − 1) parts</b>, validate on the <b>one</b> remaining part; repeat <b>k times</b> so each part is the validation fold once; compile the <b>average in-sample and out-of-sample error rates</b>.`},
+    {id:'b17', q:`In 5-fold cross validation, what fraction of the data trains the model in each iteration, how many iterations run, and how is performance summarized?`, a:`<b>4/5</b> of the data trains (k − 1 folds), <b>1/5</b> validates; <b>5 iterations</b>; Performance = <b>(1/5) × Σ Performance<sub>i</sub></b> (the average).`},
+    {id:'b18', q:`What does the training/validation data need to satisfy for the model to learn and be tested properly?`, a:`Both should be <b>large and representative of the population</b>. In cross validation, training and validation samples are randomly regenerated each learning cycle.`},
+  ],
+  c: [
+    {id:'c1', q:`What is penalized regression and what does it minimize?`, a:`A linear regression that <b>imposes a penalty on the size/number of coefficients</b> to reduce overfitting and manage multicollinearity. It minimizes <b>SSE plus a penalty value</b>; the penalty grows with the number of features → <b>parsimonious</b> model.`},
+    {id:'c2', q:`What does LASSO minimize and what does it do to unhelpful features?`, a:`<b>SSE + λ × (sum of the absolute values of the slope coefficients).</b> It <b>automatically eliminates the least predictive features</b> (coefficients driven to zero).`},
+    {id:'c3', q:`What is λ (lambda) in LASSO?`, a:`The <b>penalty hyperparameter</b> that sets the balance between overfitting the model and keeping it <b>parsimonious</b>.`},
+    {id:'c4', q:`What is regularization?`, a:`A method that forces the <b>beta coefficients of nonperforming features toward zero</b>, reducing statistical variability in high-dimension problems. It can be applied to nonlinear models too (e.g., stable covariance matrix for mean-variance optimization).`},
+    {id:'c5', q:`Define a <b>parsimonious</b> model (Professor's Note).`, a:`A model that achieves the required level of explanation using <b>as few predictor variables as possible</b> (in everyday English the word means stingy).`},
+    {id:'c6', q:`What is an SVM and what kind of problem does it solve?`, a:`A <b>linear classification</b> algorithm that separates data into <b>one of two possible classes</b> (e.g., sell vs. buy) using an <b>n-dimensional hyperplane</b> for n features.`},
+    {id:'c7', q:`How does SVM choose its boundary? Define margin and support vectors.`, a:`It picks the boundary <b>farthest from all observations</b>: a discriminant boundary plus <b>margins</b> on each side. Margins are set by the <b>support vectors</b> — the observations <b>closest to the boundary</b>.`},
+    {id:'c8', q:`What is soft margin classification?`, a:`The adaptation that handles <b>misclassified training observations</b>, optimizing the trade-off between a <b>wider margin and classification error</b>.`},
+    {id:'c9', q:`SVM decision function f(x₁,x₂) = w₁x₁ + w₂x₂ + b. How is a new point classified?`, a:`<b>Class 1 if f &gt; 0; class 0 if f ≤ 0.</b> The boundary line is f = 0.`},
+    {id:'c10', q:`Give three investment applications of SVM.`, a:`Classifying debt issuers as <b>likely vs. not likely to default</b>; <b>stocks to short vs. not</b>; classifying <b>text</b> (news, press releases) as positive or negative.`},
+    {id:'c11', q:`How does KNN classify an observation, and who sets k?`, a:`By its <b>nearness</b> to observations in the training sample: it finds the <b>k closest</b> observations. The <b>researcher specifies k</b> (a hyperparameter). Mostly classification, sometimes regression.`},
+    {id:'c12', q:`What goes wrong if k is too small, too large, or even in KNN?`, a:`<b>Too small</b> → high error rate. <b>Too large</b> → dilutes the result by averaging across too many outcomes. <b>Even</b> → ties with no clear winner.`},
+    {id:'c13', q:`Is KNN parametric? What must the analyst specify and what can skew results?`, a:`KNN is a <b>nonparametric</b> model (no assumption on data distribution). The analyst must define <b>what "near" means (distance metric)</b>; <b>irrelevant or correlated features</b> can skew results.`},
+    {id:'c14', q:`Give four investment applications of KNN.`, a:`<b>Predicting bankruptcy</b>, <b>assigning a bond to a ratings class</b>, <b>predicting stock prices</b>, <b>creating customized indices</b>.`},
+    {id:'c15', q:`When are classification trees vs. regression trees used (CART)?`, a:`<b>Classification tree</b> → <b>categorical</b> target (typically binary, e.g., IPO successful vs. not). <b>Regression tree</b> → <b>continuous</b> target.`},
+    {id:'c16', q:`Why use CART instead of a logit model?`, a:`Logit also handles binary targets but is <b>ill-suited when there are significant nonlinear relationships</b> among variables; classification trees are a viable alternative.`},
+    {id:'c17', q:`How does a classification tree split the data?`, a:`At the root the <b>top feature</b> (most important for the target) is chosen with a <b>cutoff c</b>; observations above c go to one class, the rest to the other; successive nodes use further features. Each split should <b>lower estimation error</b>; the tree stops at a <b>terminal node</b> when error cannot be reduced. A feature <b>may reappear</b> lower down with a different cutoff.`},
+    {id:'c18', q:`How is a CART tree kept from overfitting?`, a:`<b>Regularization criteria</b> set by the researcher (<b>maximum tree depth, maximum number of decision nodes</b>) or <b>pruning</b> — removing sections with minimal explanatory power.`},
+    {id:'c19', q:`Why is CART popular, and what are its investment applications?`, a:`It gives a <b>visual explanation</b> of the prediction process (not a black box). Applications: <b>detecting fraudulent financial statements</b>, <b>selecting stocks and bonds</b>.`},
+    {id:'c20', q:`What is ensemble learning and why does it work?`, a:`<b>Combining predictions from multiple models</b> rather than one; it yields a <b>lower average error rate</b> because models <b>cancel out noise</b>.`},
+    {id:'c21', q:`Contrast heterogeneous vs. homogeneous ensemble aggregation.`, a:`<b>Heterogeneous:</b> <b>different algorithms</b> combined via a <b>voting classifier</b> (majority vote). <b>Homogeneous:</b> the <b>same algorithm on different training samples</b> generated by <b>bootstrap aggregating (bagging)</b>.`},
+    {id:'c22', q:`What is bagging?`, a:`<b>Bootstrap aggregating</b>: generating random samples (bags) <b>with replacement</b> from the initial training sample.`},
+    {id:'c23', q:`What is a random forest and how does it reduce overfitting?`, a:`A variant of classification trees: <b>many trees trained on bagged data</b>, each using a <b>randomly selected subset of features</b>, so each tree differs. Final class by majority vote (like <b>crowdsourcing</b>). Subset-of-features use <b>mitigates overfitting</b>; errors across trees cancel → <b>higher signal-to-noise ratio</b>.`},
+    {id:'c24', q:`What is the drawback of random forests and what are their applications?`, a:`<b>Loses CART's transparency</b> — back to a <b>black box</b>. Applications: <b>factor-based asset allocation</b> and <b>predicting IPO success</b>.`},
+    {id:'c25', q:`An analyst uses 12 fundamental and 2 technical variables to classify bonds into 5 rating classes. How many <b>features</b> does the model have?`, a:`<b>14 features</b> (12 + 2). The 5 rating classes are the categories of the <b>target variable</b>, not features.`},
+  ],
+  d: [
+    {id:'d1', q:`Why use dimension reduction, and what is PCA?`, a:`Too many features create <b>noise</b>; dimension reduction discards attributes with little information. <b>PCA summarizes a large number of correlated factors into a much smaller set of uncorrelated factors.</b>`},
+    {id:'d2', q:`What are eigenvectors and eigenvalues in PCA?`, a:`<b>Eigenvectors</b> = the new uncorrelated factors, <b>linear combinations of the original features</b> (PCA1 = a₁X₁ + b₁X₂ + …). Each has an <b>eigenvalue</b> = the <b>proportion of total variance</b> it explains. Highest eigenvalue = most important factor.`},
+    {id:'d3', q:`What is a scree plot and how many components are kept?`, a:`Plot of the <b>proportion of total variance explained by each principal component</b> (highest to lowest; look for the elbow). Keep the <b>smallest number of components that together capture 85%–95% of total variance</b>.`},
+    {id:'d4', q:`Principal components explain 52%, 24%, 12%, 7%, 5% of variance. How many do you retain to capture at least 85%?`, a:`Cumulative: 52% → 76% → <b>88%</b> at the third. Retain <b>3 components</b>.`},
+    {id:'d5', q:`What is the main drawback of PCA?`, a:`Components are linear combinations of the original data, so they <b>cannot be easily labeled or interpreted</b> → <b>black-box</b> approach.`},
+    {id:'d6', q:`Define clustering and its common distance metric.`, a:`Grouping observations into categories based on <b>similarity of attributes (cohesion)</b>, e.g., stocks grouped by past performance instead of sector. Common metric: <b>Euclidean distance</b> (straight-line distance). Human judgment defines similarity.`},
+    {id:'d7', q:`Describe the k-means algorithm.`, a:`Partitions observations into <b>k nonoverlapping clusters</b>. Randomly place <b>k centroids</b>, assign each observation to the nearest centroid, <b>recompute centroids</b>, reassign, and repeat until <b>no reassignment</b> occurs.`},
+    {id:'d8', q:`What is the limitation of k-means and its investment use?`, a:`<b>k is chosen before clustering</b> (a hyperparameter), so you need some idea of the data. Use: <b>classifying thousands of securities</b> from patterns in high-dimensional data.`},
+    {id:'d9', q:`What is hierarchical clustering and how does it differ from k-means?`, a:`Builds a <b>hierarchy of clusters without a predefined number</b> of clusters (k-means requires k up front).`},
+    {id:'d10', q:`Contrast agglomerative and divisive hierarchical clustering.`, a:`<b>Agglomerative (bottom-up):</b> start with each observation as its own cluster and <b>merge the closest pairs</b>. <b>Divisive (top-down):</b> start with <b>one giant cluster</b> and split it into smaller ones.`},
+    {id:'d11', q:`How can clustering be used in portfolio management?`, a:`<b>Diversify</b> by investing in assets from multiple clusters; <b>risk analysis</b> — concentration shows up as a large allocation to one cluster. Clusters are unlabeled but reveal hidden structure.`},
+    {id:'d12', q:`How can ML help with ESG investing?`, a:`NLP parses corporate disclosures (text, audio, video): words like "human capital," "living wage," "D&amp;I" proxy social aspects; "sustainable," "recycle," "green" proxy environmental intent. <b>Supervised</b> algorithms (logistic regression, SVM, CART, random forests, neural networks) generate <b>ESG scores</b>.`},
+    {id:'d13', q:`Describe the layers of a neural network.`, a:`<b>Input layer</b> (one node per feature, values scaled), <b>hidden layer(s)</b> of <b>neurons</b>, and an <b>output layer</b> (typically a single node = the prediction).`},
+    {id:'d14', q:`What does a neuron compute?`, a:`A <b>summation operator</b> (weighted average of its inputs) followed by a typically <b>nonlinear activation function</b>; the value is passed forward to neurons in the next layer.`},
+    {id:'d15', q:`Distinguish forward and backward propagation.`, a:`<b>Forward propagation:</b> values pass forward through the layers. <b>Backward propagation:</b> the <b>weights</b> in the summation operators are <b>revised as the network learns from its errors</b>.`},
+    {id:'d16', q:`A network has 3 inputs, one hidden layer of 4 nodes and 1 output node. What is its structure and what is this called?`, a:`<b>(3, 4, 1)</b> — set by the researcher and called the network's <b>hyperparameters</b>; may be revised based on out-of-sample performance.`},
+    {id:'d17', q:`What is a deep learning network (DLN)?`, a:`A neural network with <b>many hidden layers — at least 2, often more than 20</b>. The last layer gives the probability of each category; the observation goes to the highest.`},
+    {id:'d18', q:`List applications of DLNs and the Black-Scholes study result.`, a:`Image, pattern, speech and character recognition; credit card fraud detection; autonomous cars; NLP; investment decisions. Using the <b>six Black-Scholes inputs</b>, a DLN predicted option values with <b>R² = 99.8%</b>.`},
+    {id:'d19', q:`Why have DLNs become popular?`, a:`Advances in <b>analytical methods</b>, increases in <b>computing speed</b>, and availability of large quantities of <b>machine-readable data</b>.`},
+    {id:'d20', q:`What is reinforcement learning (RL) and how does it differ from supervised learning?`, a:`An <b>agent seeks to maximize a defined reward</b> under constraints. It uses <b>no labeled data</b> and gets <b>no instantaneous feedback</b>; it learns from <b>(millions of) trials</b>. Example: <b>AlphaGo</b> beat the Go world champion. Its efficacy in investing is <b>not yet conclusive</b>.`},
+    {id:'d21', q:`Which is least a black box: PCA, classification trees, or random forests?`, a:`<b>Classification trees</b> — they give a visual explanation of the prediction process. PCA (unlabeled components) and random forests (unclear feature guidance) are black boxes.`},
+  ],
+
+};
+
+const ALL_CARDS = Object.values(FLASHCARDS).flat();
+
+// ---------------------------------------------------------------------------
+// QUIZ DATA — adapted from CFA Institute / Schweser Module Quizzes 21.1-21.5
+// (verified against the source docx's own answer key and cross-checked
+// against every embedded worked-example image) plus original questions
+// written to ensure every LOS has adequate coverage. Where the source
+// answer key's own LOS citation didn't match what a question actually
+// tests, the question is classified here by its real content instead.
+// ---------------------------------------------------------------------------
+const QUIZ = [
+  {id:'q1', section:'a', q:`Which statement about target variables is most accurate?`, opts:[`They can be continuous, ordinal, or categorical.`,`They are not specified for supervised learning.`,`They refer to independent variables.`], correct:0, exp:`Target variables (dependent variables) can be continuous, ordinal, or categorical. They are <b>not specified for unsupervised</b> learning, and they are the dependent (not independent) variables.`},
+  {id:'q2', section:'a', q:`Which statement most accurately describes supervised learning?`, opts:[`It uses labeled training data.`,`It requires periodic human intervention.`,`It is best suited for classification.`], correct:0, exp:`Supervised learning uses labeled training data and does not need human intervention. It handles both classification and regression, so "best suited for classification" is wrong.`},
+  {id:'q3', section:'b', q:`A model that has poor in-sample explanatory power is most likely to have a high:`, opts:[`bias error.`,`variance error.`,`base error.`], correct:0, exp:`Bias error is the in-sample error from models with a poor fit.`},
+  {id:'q4', section:'b', q:`The problem of overfitting a model would least appropriately be addressed by:`, opts:[`imposing a penalty on included features that do not add to the explanatory power of the model.`,`using cross validation.`,`using a smaller sample.`], correct:2, exp:`Overfitting is addressed by complexity reduction (penalty) and cross validation, which needs large, representative samples. A smaller sample is least appropriate.`},
+  {id:'q5', section:'b', q:`Cross validation occurs when:`, opts:[`training and validation samples change over the learning cycle.`,`prediction is tested in another heterogeneous sample.`,`the performance parameter is set by another algorithm.`], correct:0, exp:`In cross validation, the training and validation samples are randomly generated every learning cycle.`},
+  {id:'q6', section:'c', q:`A general linear regression model that focuses on reduction of the total number of features used is best described as a:`, opts:[`clustering model.`,`deep learning model.`,`penalized regression model.`], correct:2, exp:`Penalized regression imposes a penalty based on the number of features and is used to build parsimonious models.`},
+  {id:'q7', section:'c', q:`A machine learning technique that can be applied to predict either a categorical target variable or a continuous target variable is most likely to describe a:`, opts:[`support vector machine.`,`classification and regression tree (CART).`,`logit model.`], correct:1, exp:`CART produces classification trees (categorical target) or regression trees (continuous target). SVM and logit models are used only for categorical targets.`},
+  {id:'q8', section:'c', q:`An algorithm to assign a bond to a credit rating category (AAA, AA, etc.) using labeled training data is least likely to use:`, opts:[`clustering.`,`classification and regression tree (CART).`,`K-nearest neighbor (KNN).`], correct:0, exp:`CART and KNN are supervised classification algorithms. Clustering is unsupervised (it does not use labeled data such as rating labels).`},
+  {id:'q9', section:'c', q:`A fixed-income analyst is designing a model to categorize bonds into one of five ratings classifications. The analyst uses 12 fundamental variables and 2 technical variables to help her in the task. The number of features used by the analyst is closest to:`, opts:[`14 features.`,`70 features.`,`120 features.`], correct:0, exp:`Features are the independent variables: 12 + 2 = 14. The five ratings classes are categories of the target variable.`},
+  {id:'q10', section:'d', q:`Image recognition problems are best suited for which category of machine learning (ML) algorithms?`, opts:[`Hierarchical clustering.`,`Unsupervised learning.`,`Deep learning.`], correct:2, exp:`Deep learning algorithms are used for complex tasks such as image recognition and natural language processing.`},
+  {id:'q11', section:'d', q:`Which of the following is least likely to be described as a black-box approach to machine learning (ML)?`, opts:[`Principal component analysis (PCA).`,`Classification trees.`,`Random forests.`], correct:1, exp:`Classification trees give a visual explanation of the predictive process. Random forests and PCA do not give clear guidance about the features used or what components represent.`},
+  {id:'q12', section:'d', q:`An analyst wants to categorize an investment universe of 1,000 stocks into 10 dissimilar groups, with no labeled training data. The machine learning (ML) algorithm most suited for this task is:`, opts:[`a classification and regression tree (CART).`,`clustering.`,`regression.`], correct:1, exp:`With no labeled training data an unsupervised algorithm is needed. CART and regression are supervised; clustering is unsupervised and suitable.`},
+  {id:'q13', section:'a', q:`A researcher gives an algorithm many financial ratios for 500 firms, with no labels, and asks it to find natural groupings. This is an example of:`, opts:[`supervised learning.`,`unsupervised learning.`,`reinforcement learning.`], correct:1, exp:`No labeled data and no target variable; the program seeks structure → unsupervised learning (clustering).`},
+  {id:'q14', section:'a', q:`A data set has too many features and the target is a continuous variable that is linearly related to the features. According to the algorithm-selection steps, the analyst should first apply ______ and then use ______.`, opts:[`penalized regression; PCA`,`PCA; penalized regression`,`k-means; CART`], correct:1, exp:`Step 1: reduce a complex (too many features) data set with dimension reduction (PCA). Then a numerical prediction with linear data → penalized regression.`},
+  {id:'q15', section:'a', q:`Programs that learn from their own output and prediction errors, seeking to maximize a defined reward, are best described as:`, opts:[`reinforcement learning algorithms.`,`supervised learning algorithms.`,`k-means clustering.`], correct:0, exp:`Reinforcement learning learns from its own prediction errors/feedback from many trials to maximize a reward.`},
+  {id:'q16', section:'b', q:`A learning curve shows in-sample accuracy converging to the desired accuracy level but out-of-sample accuracy remaining far below it. The model most likely suffers from:`, opts:[`high bias error.`,`high variance error.`,`high base error.`], correct:1, exp:`Out-of-sample accuracy lagging far behind in-sample accuracy indicates overfitting (high variance error). High bias error would show both curves converging well below the desired level.`},
+  {id:'q17', section:'b', q:`In-sample error is 4%, out-of-sample error is 15%, and the irreducible noise is about 3%. Compared with a well-generalizing model, which statement is most accurate?`, opts:[`The model is underfit because bias error is large.`,`The model is overfit because the out-of-sample error far exceeds the in-sample error.`,`The model is robust because base error is small.`], correct:1, exp:`A large gap between out-of-sample and in-sample error signals high variance error (overfitting). Out-of-sample error = bias + variance + base error.`},
+  {id:'q18', section:'b', q:`As the complexity of a model increases, bias error and variance error are most likely to:`, opts:[`both increase.`,`decrease and increase, respectively.`,`increase and decrease, respectively.`], correct:1, exp:`Variance error increases with complexity while bias error decreases; the optimal complexity minimizes total error.`},
+  {id:'q19', section:'b', q:`In 5-fold cross validation on 1,000 observations, the number of observations used for training in each iteration and the number of iterations are closest to:`, opts:[`800 and 5.`,`200 and 5.`,`800 and 1.`], correct:0, exp:`k = 5 folds of 200; (k − 1) = 4 folds = 800 train, 1 fold validates; repeated k = 5 times.`},
+  {id:'q20', section:'c', q:`LASSO minimizes the sum of squared errors plus a penalty equal to λ times the:`, opts:[`sum of the absolute values of the slope coefficients.`,`number of observations.`,`sum of the squared residuals.`], correct:0, exp:`LASSO adds λ × Σ|b|, automatically eliminating the least predictive features.`},
+  {id:'q21', section:'c', q:`A support vector machine classifies a new observation with f(x₁,x₂) = 0.8x₁ − 0.5x₂ + 0.1 and x₁ = 0.5, x₂ = 1.2. The observation is assigned to:`, opts:[`class 1, because f is greater than 0.`,`class 0, because f is less than or equal to 0.`,`class 1, because the weights on x₁ are positive.`], correct:1, exp:`f = 0.8(0.5) − 0.5(1.2) + 0.1 = 0.4 − 0.6 + 0.1 = −0.1, which is ≤ 0 → class 0 (class 1 requires f &gt; 0).`},
+  {id:'q22', section:'c', q:`In K-nearest neighbor classification, choosing a k that is too large will most likely:`, opts:[`produce a high error rate by ignoring most neighbors.`,`dilute the result by averaging across too many outcomes.`,`guarantee a clear winner without ties.`], correct:1, exp:`Too small k → high error rate; too large → dilutes the result; an even k may produce ties.`},
+  {id:'q23', section:'c', q:`Which statement about random forests is most accurate?`, opts:[`They train many trees on bagged data, each with a random subset of features, but lose the transparency of a single tree.`,`They aggregate different algorithms through a voting classifier.`,`They are linear classifiers that maximize the margin.`], correct:0, exp:`Random forest = many classification trees from bagged data using random feature subsets; error cancellation raises the signal-to-noise ratio, but transparency is lost. Option B describes heterogeneous ensembles; C describes SVM.`},
+  {id:'q24', section:'c', q:`An analyst wants to classify a binary target (IPO successful vs. not) where relationships among variables are significantly nonlinear and wants a visual, interpretable result. The most appropriate algorithm is:`, opts:[`a logit model.`,`a classification tree.`,`principal components analysis.`], correct:1, exp:`Logit models are ill-suited to significant nonlinearities; classification trees handle them and give a visual explanation.`},
+  {id:'q25', section:'c', q:`Creating bootstrap samples drawn at random with replacement from a training sample, to train the same algorithm repeatedly, is known as:`, opts:[`bagging.`,`k-fold cross validation.`,`a voting classifier.`], correct:0, exp:`Bootstrap aggregating (bagging) draws random samples with replacement; it is used for homogeneous ensembles.`},
+  {id:'q26', section:'d', q:`Principal components explain 55%, 25%, 10%, 6% and 4% of the variance. To capture at least 85% of the total variance, the analyst should retain:`, opts:[`two components.`,`three components.`,`five components.`], correct:1, exp:`Cumulative: 55% → 80% → 90%. Three components are the smallest number reaching 85%–95%.`},
+  {id:'q27', section:'d', q:`Which statement about k-means clustering is most accurate?`, opts:[`The number of clusters k must be set before clustering starts.`,`It builds a hierarchy without a predefined number of clusters.`,`It uses labeled training data to define the clusters.`], correct:0, exp:`k is a hyperparameter chosen up front. Hierarchical clustering needs no predefined number; clustering is unsupervised (no labels).`},
+  {id:'q28', section:'d', q:`A clustering algorithm starts with each stock as its own cluster and repeatedly merges the closest pair. It is best described as:`, opts:[`divisive hierarchical clustering.`,`agglomerative hierarchical clustering.`,`k-means clustering.`], correct:1, exp:`Agglomerative (bottom-up) clustering starts with single-observation clusters and merges the most similar ones.`},
+  {id:'q29', section:'d', q:`In a neural network, the process of revising the weights in the summation operators as the network learns from its errors is called:`, opts:[`forward propagation.`,`backward propagation.`,`bagging.`], correct:1, exp:`Forward propagation passes values forward; backward propagation revises the weights based on errors.`},
+  {id:'q30', section:'d', q:`A network with three inputs, a single hidden layer of four nodes, and a single output node has a structure of (3, 4, 1). This structure is best described as the network's:`, opts:[`eigenvalues.`,`hyperparameters.`,`activation functions.`], correct:1, exp:`The number of nodes in each layer is set by the researcher and called the network's hyperparameters.`},
+  {id:'q31', section:'d', q:`A deep learning network is a neural network with at least:`, opts:[`two hidden layers.`,`five hidden layers.`,`twenty hidden layers.`], correct:0, exp:`DLNs have many hidden layers — at least 2, often more than 20.`},
+
+];
+
+// ---------------------------------------------------------------------------
+// QUIZ ENGINE — #quiz-area is a singleton container (only one quiz session
+// displayed at a time), so plain document.querySelectorAll('#quiz-area .opt')
+// is safe here (unlike the flashcard decks, which can co-exist in the DOM).
+// ---------------------------------------------------------------------------
+let quizState = null;
+
+function renderQuizSetup(){
+  const area = document.getElementById('quiz-area');
+  const last = state.quizHistory.length ? state.quizHistory[state.quizHistory.length-1] : null;
+  area.innerHTML = `
+    <div class="quiz-card">
+      <p style="color:var(--text-muted); margin-bottom:14px;">Choose how many questions to attempt. Options are reshuffled and the correct answer's position changes every time.</p>
+      <div class="quiz-setup">
+        <button class="btn btn-primary" data-n="10">10 Questions</button>
+        <button class="btn btn-primary" data-n="20">20 Questions</button>
+        <button class="btn btn-primary" data-n="${QUIZ.length}">All (${QUIZ.length}) Questions</button>
+      </div>
+      ${last ? `<p style="color:var(--text-dim); font-size:12.5px;">Last attempt: <span class="quiz-score">${last.score}/${last.total}</span></p>` : ''}
+    </div>
+  `;
+  area.querySelectorAll('[data-n]').forEach(btn=>{
+    btn.addEventListener('click', ()=> startQuiz(parseInt(btn.getAttribute('data-n'))) );
+  });
+}
+
+function startQuiz(n){
+  const pool = shuffle(QUIZ).slice(0, n);
+  quizState = { pool, idx:0, score:0, answered:false, wrongList:[] };
+  renderQuizQuestion();
+}
+
+function renderQuizQuestion(){
+  const area = document.getElementById('quiz-area');
+  const q = quizState.pool[quizState.idx];
+  const letters = ['A','B','C'];
+  const order = shuffle([0,1,2]);
+  quizState.currentOrder = order;
+  quizState.correctShuffledIdx = order.indexOf(q.correct);
+  quizState.answered = false;
+
+  area.innerHTML = `
+    <div class="quiz-card">
+      <div class="quiz-meta"><span>Question ${quizState.idx+1} / ${quizState.pool.length}</span><span>LOS 3.${q.section}</span></div>
+      <div class="quiz-q">${q.q}</div>
+      <div id="quiz-opts">
+        ${order.map((origIdx,i)=>`<div class="opt" data-i="${i}"><span class="oletter">${letters[i]}.</span><span>${q.opts[origIdx]}</span></div>`).join('')}
+      </div>
+      <div id="quiz-feedback"></div>
+    </div>
+  `;
+  area.querySelectorAll('.opt').forEach(el=>{
+    el.addEventListener('click', ()=> answerQuiz(parseInt(el.getAttribute('data-i'))) );
+  });
+}
+
+function answerQuiz(chosenIdx){
+  if(quizState.answered) return;
+  quizState.answered = true;
+  const q = quizState.pool[quizState.idx];
+  const correctIdx = quizState.correctShuffledIdx;
+  const opts = document.querySelectorAll('#quiz-area .opt');
+  opts.forEach((el,i)=>{
+    el.classList.add('disabled');
+    if(i===correctIdx) el.classList.add('correct');
+    else if(i===chosenIdx) el.classList.add('wrong');
+  });
+  const isCorrect = chosenIdx === correctIdx;
+  if(isCorrect) quizState.score++;
+  else quizState.wrongList.push(q);
+
+  const isLast = quizState.idx === quizState.pool.length-1;
+  document.getElementById('quiz-feedback').innerHTML = `
+    <div class="quiz-exp"><b>${isCorrect?'✅ Correct.':'❌ Not quite.'}</b> ${q.exp}</div>
+    <div class="btn-row">
+      <button class="btn btn-primary quiz-next-btn">${isLast ? 'See Results →' : 'Next Question →'}</button>
+    </div>
+  `;
+  document.querySelector('.quiz-next-btn').addEventListener('click', ()=>{
+    if(isLast) finishQuiz(); else { quizState.idx++; renderQuizQuestion(); }
+  });
+}
+
+function finishQuiz(){
+  state.quizHistory.push({date: todayStr(), score: quizState.score, total: quizState.pool.length});
+  saveState();
+  const area = document.getElementById('quiz-area');
+  const pct = Math.round(quizState.score/quizState.pool.length*100);
+  area.innerHTML = `
+    <div class="quiz-card quiz-result">
+      <div style="font-size:15px; color:var(--text-muted);">Quiz Complete</div>
+      <div class="bigscore">${quizState.score}/${quizState.pool.length}</div>
+      <div style="color:var(--text-muted); margin-bottom:16px;">${pct}% correct</div>
+      ${quizState.wrongList.length ? `<div style="text-align:left; margin-top:10px;"><b>Review missed questions:</b>${quizState.wrongList.map(q=>`<div class="wrong-review-item"><div class="wq">LOS 3.${q.section}: ${q.q}</div><div style="color:var(--text-dim);">${q.exp}</div></div>`).join('')}</div>` : `<p style="color:var(--green-soft); font-weight:600;">Perfect score — nice work!</p>`}
+      <div class="btn-row" style="justify-content:center;">
+        <button class="btn btn-primary" id="quiz-again-btn">Take Another Quiz</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('quiz-again-btn').addEventListener('click', renderQuizSetup);
+}
+
+// ---------------------------------------------------------------------------
+// FIREBASE PERSISTENCE — fixed shared path (see FIREBASE_STATE_PATH above),
+// with a localStorage cache so the app renders instantly and still works
+// offline. loadState/saveState check firebaseAvailable BEFORE calling
+// fbGet/fbSet, so a blocked CDN never throws — it just stays in
+// localStorage-only mode. NOTE per project convention: this database uses
+// open test-mode rules ({".read": true, ".write": true}) — anyone with the
+// URL can read or write this data. Acceptable for personal, non-sensitive
+// study progress, but worth knowing.
+// ---------------------------------------------------------------------------
+function setSyncStatus(msg, ok=true){
+  const el = document.getElementById('sync-status');
+  const line = document.getElementById('sync-line');
+  if(el) el.textContent = msg;
+  if(line) line.classList.toggle('offline', !ok);
+}
+function cacheState(){
+  try{ localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(state)); }
+  catch(e){ console.warn('Could not write local cache:', e); }
+}
+function loadCachedState(){
+  try{
+    const raw = localStorage.getItem(LOCAL_CACHE_KEY);
+    if(!raw) return false;
+    const saved = JSON.parse(raw);
+    state.cardProgress = saved.cardProgress || {};
+    state.quizHistory = Array.isArray(saved.quizHistory) ? saved.quizHistory : [];
+    state.practiceDone = saved.practiceDone || {};
+    return true;
+  }catch(e){ return false; }
+}
+async function loadState(){
+  const hadCache = loadCachedState();
+  setSyncStatus(hadCache ? 'checking Firebase…' : 'syncing…');
+  refreshAllUI();
+  if(!firebaseAvailable){
+    setSyncStatus('offline (local storage only)', false);
+    refreshAllUI();
+    return;
+  }
+  try{
+    const snapshot = await fbGet(firebaseStateRef());
+    if(snapshot.exists()){
+      const saved = snapshot.val() || {};
+      state.cardProgress = saved.cardProgress || {};
+      state.quizHistory = Array.isArray(saved.quizHistory) ? saved.quizHistory : [];
+      state.practiceDone = saved.practiceDone || {};
+      cacheState();
+      setSyncStatus('synced');
+    } else {
+      await fbSet(firebaseStateRef(), { cardProgress: state.cardProgress, quizHistory: state.quizHistory, practiceDone: state.practiceDone, updatedAt: new Date().toISOString() });
+      cacheState();
+      setSyncStatus('initialized');
+    }
+  }catch(e){
+    setSyncStatus('offline (cache)', false);
+  }
+  refreshAllUI();
+}
+async function saveState(){
+  cacheState();
+  if(!firebaseAvailable){ setSyncStatus('offline (local storage only)', false); return; }
+  try{
+    await fbSet(firebaseStateRef(), { cardProgress: state.cardProgress, quizHistory: state.quizHistory, practiceDone: state.practiceDone, updatedAt: new Date().toISOString() });
+    setSyncStatus('saved');
+  }catch(e){ setSyncStatus('not synced', false); }
+}
+
+// ---------------------------------------------------------------------------
+// INIT
+// ---------------------------------------------------------------------------
+async function init(){
+  document.querySelectorAll('.nav-item[data-view]').forEach(btn=>{
+    btn.addEventListener('click', ()=> navigateTo(btn.getAttribute('data-view')) );
+  });
+  initSectionDecks();
+  initIllustrations();
+  updateStatsBar();
+  renderOverviewRoadmap();
+  await initFirebase();
+  await loadState();
+  updateNavDots();
+}
+
+function handleQuizKeydown(e){
+  if(!quizState) return;
+  if(!quizState.answered && ['1','2','3'].includes(e.key)){
+    const i = parseInt(e.key)-1;
+    const opts = document.querySelectorAll('#quiz-area .opt');
+    if(opts[i]) opts[i].click();
+  } else if(e.key === 'Enter'){
+    const nextBtn = document.querySelector('.quiz-next-btn') || document.getElementById('quiz-again-btn');
+    if(nextBtn){ e.preventDefault(); nextBtn.click(); }
+  }
+}
+
+document.addEventListener('keydown', (e)=>{
+  const tag = (e.target && e.target.tagName) || '';
+  if(['INPUT','TEXTAREA','SELECT'].includes(tag)) return;
+
+  const activeViewEl = document.querySelector('.view.active');
+  if(!activeViewEl) return;
+  const activeViewId = activeViewEl.id.replace('view-','');
+
+  if(activeViewId === 'quiz'){ handleQuizKeydown(e); return; }
+
+  if(FLASHCARD_VIEWS.includes(activeViewId)){
+    if(e.key === 'ArrowRight'){
+      e.preventDefault();
+      const btn = activeViewEl.querySelector('.fc-next');
+      if(btn) btn.click();
+    } else if(e.key === 'ArrowLeft'){
+      e.preventDefault();
+      const btn = activeViewEl.querySelector('.fc-prev');
+      if(btn) btn.click();
+    } else if(e.key === ' ' || e.code === 'Space'){
+      if(tag !== 'BUTTON'){
+        e.preventDefault();
+        const card = activeViewEl.querySelector('.fc-card');
+        if(card) card.click();
+      }
+    } else if(e.key === 'Enter'){
+      if(tag !== 'BUTTON'){
+        e.preventDefault();
+        goToNextModule();
+      }
+    }
+  } else if(e.key === 'Enter' && tag !== 'BUTTON'){
+    e.preventDefault();
+    goToNextModule();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PRACTICE DATA — step-reveal worked problems (Variant A). All figures are
+// taken from the source docx's own worked examples and cross-checked
+// against every embedded exhibit image; every number ties out with the
+// source's stated answer.
+// ---------------------------------------------------------------------------
+const PRACTICE = [
+  {id:'p1', tag:'LOS 3.b', title:`k-fold cross validation setup`, scenario:`A data set has 1,000 observations and is analyzed with 5-fold cross validation. The five validation-fold error rates are 12%, 9%, 11%, 10% and 8%. (a) How many observations train and validate the model in each iteration? (b) What is the average out-of-sample error?`,
+    steps:[`Each fold has 1,000 / 5 = 200 observations.`,`Training uses k − 1 = 4 folds = <b>800</b> observations; validation uses <b>200</b>; the process repeats 5 times.`,`Average error = (12 + 9 + 11 + 10 + 8) / 5 = 50 / 5 = <b>10%</b>.`], final:`800 train / 200 validate per iteration; average error 10%.`},
+  {id:'p2', tag:'LOS 3.c', title:`LASSO objective and the role of λ`, scenario:`Model A uses 4 features: SSE = 40, Σ|b| = 4. Model B uses 2 features: SSE = 43, Σ|b| = 2. LASSO minimizes SSE + λΣ|b|. Which model is preferred when (a) λ = 2 and (b) λ = 0.5?`,
+    steps:[`(a) λ = 2: A = 40 + 2(4) = 48; B = 43 + 2(2) = 47 → <b>B</b> (lower).`,`(b) λ = 0.5: A = 40 + 0.5(4) = 42; B = 43 + 0.5(2) = 44 → <b>A</b> (lower).`,`A larger λ penalizes extra features more heavily, so the more parsimonious model wins.`], final:`(a) Model B (47 vs. 48); (b) Model A (42 vs. 44).`},
+  {id:'p3', tag:'LOS 3.d', title:`PCA component retention`, scenario:`A PCA on 5 correlated factors gives eigenvalue proportions of 52%, 24%, 12%, 7% and 5% of total variance. The analyst wants to retain the smallest number of components capturing at least 85% of variance. How many components are kept and how much variance do they explain?`,
+    steps:[`Cumulative: 1 component = 52%; 2 = 52 + 24 = 76%; 3 = 76 + 12 = <b>88%</b>.`,`Three components reach the 85%–95% target; two (76%) do not.`], final:`Keep 3 components, explaining 88% of total variance.`},
+  {id:'p4', tag:'LOS 3.c', title:`SVM classification of a new point`, scenario:`An SVM gives f(x₁,x₂) = 2x₁ − 3x₂ + 1. Classify (a) x₁ = 2, x₂ = 1 and (b) x₁ = 1, x₂ = 2. Rule: class 1 if f &gt; 0, otherwise class 0.`,
+    steps:[`(a) f = 2(2) − 3(1) + 1 = 4 − 3 + 1 = <b>2 &gt; 0</b> → class 1.`,`(b) f = 2(1) − 3(2) + 1 = 2 − 6 + 1 = <b>−3 ≤ 0</b> → class 0.`], final:`(a) Class 1; (b) class 0.`},
+  {id:'p5', tag:'LOS 3.d', title:`Neural network structure`, scenario:`A network has 6 input features, two hidden layers with 8 and 4 nodes, and one output node. (a) Write the structure. (b) Is it a deep learning network? (c) What are these numbers called?`,
+    steps:[`(a) Input 6, hidden 8 and 4, output 1 → <b>(6, 8, 4, 1)</b>.`,`(b) DLNs have at least 2 hidden layers; this network has 2 → <b>yes</b>.`,`(c) Set by the researcher → <b>hyperparameters</b>, revisable using out-of-sample performance.`], final:`(6, 8, 4, 1); yes, a DLN; hyperparameters.`},
+  {id:'p6', tag:'LOS 3.a', title:`Pick the algorithm`, scenario:`For each, choose the most suitable algorithm using the Figure 3.2 steps: (1) predict next-quarter revenue (continuous) from 8 linearly related features; (2) classify 2,000 bonds into AAA…B, linear data, labeled; (3) group 3,000 stocks into a known number of clusters, linear data, no labels; (4) group stocks with an unknown number of clusters; (5) read thousands of news articles for sentiment (complex nonlinear).`,
+    steps:[`(1) Numerical prediction, linear → <b>penalized regression</b>.`,`(2) Supervised classification, linear → <b>KNN or SVM</b> (KNN for a multicategory ratings class).`,`(3) Unsupervised, categories known → <b>k-means</b>.`,`(4) Unsupervised, number unknown → <b>hierarchical clustering</b>.`,`(5) Complex nonlinear / NLP → <b>neural networks / deep learning</b> (or CART/random forest if supervised labels exist).`], final:`(1) Penalized regression; (2) KNN/SVM; (3) k-means; (4) hierarchical; (5) neural network/deep learning.`},
+  {id:'p7', tag:'LOS 3.b', title:`Diagnose the learning curve`, scenario:`A model reaches 98% in-sample accuracy but only 78% out-of-sample accuracy; the desired accuracy is 95%. A second model reaches 70% in-sample and 69% out-of-sample. Diagnose each and suggest a remedy.`,
+    steps:[`Model 1: in-sample at/above desired level, out-of-sample far behind → <b>high variance error (overfit)</b>. Remedy: complexity reduction (penalty), cross validation, fewer features.`,`Model 2: both converge far below 95% → <b>high bias error (underfit)</b>. Remedy: a more complex model or more informative features.`], final:`Model 1 overfit (high variance); Model 2 underfit (high bias).`},
+
+];
+
+function initIllustrations(){}
+// ---------------------------------------------------------------------------
+// OVERVIEW ROADMAP + STATS
+// ---------------------------------------------------------------------------
+const ROADMAP_META = {a:{icon:'🧠', label:'Supervised, Unsupervised & Deep Learning'},b:{icon:'📉', label:'Overfitting & Remedies'},c:{icon:'🌳', label:'Supervised Learning Algorithms'},d:{icon:'🕸️', label:'Unsupervised, Neural Nets & DLNs'}};
+function renderOverviewRoadmap(){
+  const el = document.getElementById('overview-roadmap');
+  if(!el) return;
+  el.innerHTML = LOS_ORDER.map(sec=>{
+    const st = sectionMasteryState(sec);
+    const ic = st==='mastered' ? '✅' : st==='started' ? '🟡' : ROADMAP_META[sec].icon;
+    return `<div class="roadmap-item" data-view="${sec}">
+      <span class="ric">${ic}</span>
+      <div style="flex:1;">
+        <div class="rit">LOS 3.${sec} — ${ROADMAP_META[sec].label}</div>
+        <div class="risub">${FLASHCARDS[sec].length} flashcards</div>
+      </div>
+      <span class="rarrow">→</span>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.roadmap-item').forEach(item=>{
+    item.addEventListener('click', ()=> navigateTo(item.getAttribute('data-view')) );
+  });
+}
+function updateStatsBar(){
+  const m = masteryPercent(), d = dueCount();
+  document.getElementById('stat-mastery').textContent = m+'%';
+  document.getElementById('stat-due').textContent = d;
+  const ov1 = document.getElementById('ov-cards'); if(ov1) ov1.textContent = ALL_CARDS.length;
+  const ov2 = document.getElementById('ov-quiz'); if(ov2) ov2.textContent = QUIZ.length;
+  const ov3 = document.getElementById('ov-practice'); if(ov3) ov3.textContent = PRACTICE.length;
+}
+function updateNavDots(){
+  LOS_ORDER.forEach(sec=>{
+    const dot = document.getElementById('dot-'+sec);
+    if(!dot) return;
+    const st = sectionMasteryState(sec);
+    dot.classList.remove('started','mastered');
+    if(st==='mastered') dot.classList.add('mastered');
+    else if(st==='started') dot.classList.add('started');
+  });
+  updateStatsBar();
+  renderOverviewRoadmap();
+}
+function refreshAllUI(){
+  updateNavDots();
+}
+
+function renderPractice(){
+  const area = document.getElementById('practice-area');
+  area.innerHTML = PRACTICE.map(p=>`
+    <div class="practice-card" id="practice-${p.id}">
+      <div class="ph">
+        <div><span class="tag tag-gold">${p.tag}</span> <h3 style="display:inline; margin-left:8px;">${p.title}</h3></div>
+        <label class="done-check"><input type="checkbox" data-practice="${p.id}" ${state.practiceDone[p.id]?'checked':''}> Done</label>
+      </div>
+      <div class="practice-scenario">${p.scenario}</div>
+      <p style="font-size:12.5px; color:var(--text-dim); margin:0 0 10px;">Work it out yourself first, then reveal each step to check:</p>
+      ${p.steps.map((s,i)=>`<details><summary>Reveal Step ${i+1}</summary><div>${s}</div></details>`).join('')}
+      <div class="practice-final">Answer: ${p.final}</div>
+    </div>
+  `).join('');
+  area.querySelectorAll('[data-practice]').forEach(chk=>{
+    chk.addEventListener('change', ()=>{
+      state.practiceDone[chk.getAttribute('data-practice')] = chk.checked;
+      saveState();
+    });
+  });
+}
+
+// Call init() only now, at the very end of the script, so every top-level
+// const (FLASHCARDS, ALL_CARDS, QUIZ, PRACTICE) has already been evaluated —
+// init()'s call chain (updateStatsBar, renderOverviewRoadmap, etc.) reads
+// all of them.
+init();
+</script>
+</body>
+</html>
